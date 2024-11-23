@@ -1,17 +1,20 @@
 import os
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from aiogram.utils import executor
-from aiogram.dispatcher import FSMContext
-from aiogram.contrib.middlewares.logging import LoggingMiddleware
-from aiogram.dispatcher.filters.state import State, StatesGroup
-from aiogram.dispatcher.storage import MemoryStorage
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.middleware import FSMMiddleware
 
-# Бот и диспетчер
-BOT_TOKEN = os.getenv("6072615655:AAHQh3BVU3HNHd3p7vfvE3JsBzfHiG-hNMU")
+# Создаем бота и диспетчер
+BOT_TOKEN = "6072615655:AAHQh3BVU3HNHd3p7vfvE3JsBzfHiG-hNMU"
 bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher(bot, storage=MemoryStorage())
-dp.middleware.setup(LoggingMiddleware())
+storage = MemoryStorage()
+dp = Dispatcher(storage=storage)
+
+# Добавляем Middleware для работы FSM
+dp.message.middleware(FSMMiddleware(storage))
+
 
 # Состояния
 class OrderState(StatesGroup):
