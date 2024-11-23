@@ -9,7 +9,7 @@ from aiogram.dispatcher.storage import MemoryStorage
 
 # Бот и диспетчер
 BOT_TOKEN = os.getenv("6072615655:AAHQh3BVU3HNHd3p7vfvE3JsBzfHiG-hNMU")
-bot = Bot(token=6072615655:AAHQh3BVU3HNHd3p7vfvE3JsBzfHiG-hNMU)
+bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(bot, storage=MemoryStorage())
 dp.middleware.setup(LoggingMiddleware())
 
@@ -117,7 +117,7 @@ async def send_order(callback_query: types.CallbackQuery, state: FSMContext):
         for user_id in PRIVATE_RECIPIENTS:
             await bot.send_message(user_id, message_text)
     else:
-        await bot.send_message(-1001715555487, message_text)  # ID вашего канала
+        await bot.send_message(-1001820926878, message_text)  # ID вашего канала
     await callback_query.message.edit_text("Сообщение отправлено!")
     await start_command(callback_query.message, state)
 
