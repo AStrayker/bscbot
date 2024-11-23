@@ -9,7 +9,7 @@ from aiogram.dispatcher.storage import MemoryStorage
 
 # Бот и диспетчер
 BOT_TOKEN = os.getenv("6072615655:AAHQh3BVU3HNHd3p7vfvE3JsBzfHiG-hNMU")
-bot = Bot(token=6072615655:AAHQh3BVU3HNHd3p7vfvE3JsBzfHiG-hNMU)
+bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(bot, storage=MemoryStorage())
 dp.middleware.setup(LoggingMiddleware())
 
