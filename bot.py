@@ -8,7 +8,7 @@ from aiogram.fsm.middleware import FSMMiddleware
 
 # Создаем бота и диспетчер
 BOT_TOKEN = "6072615655:AAHQh3BVU3HNHd3p7vfvE3JsBzfHiG-hNMU"
-bot = Bot(token=BOT_TOKEN)
+bot = Bot(token=6072615655:AAHQh3BVU3HNHd3p7vfvE3JsBzfHiG-hNMU)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
