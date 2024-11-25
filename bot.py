@@ -4,11 +4,11 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.utils import executor
+from aiogram.dispatcher.filters import Text
 
 # Telegram токен
 API_TOKEN = '6072615655:AAHQh3BVU3HNHd3p7vfvE3JsBzfHiG-hNMU'
 CHANNEL_ID = '@precoinmarket_channel'
-METAL_RECIPIENTS = [123456789, 987654321]  # ID пользователей для отправки в ЛС
 
 # Временное хранилище данных пользователей
 user_data = {}
@@ -22,131 +22,105 @@ bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 dp.middleware.setup(LoggingMiddleware())
 
-
-# Функция возврата к стартовому шагу
-async def go_to_start(user_id):
-    keyboard = InlineKeyboardMarkup()
-    keyboard.add(InlineKeyboardButton("Сообщить о товаре", callback_data="scenario_1"))
-    keyboard.add(InlineKeyboardButton("Товар в вагонах", callback_data="scenario_2"))
-    await bot.send_message(user_id, "Выберите следующий вариант:", reply_markup=keyboard)
-
-
-# Шаг 1: Начало сценария
+# Начало сценария
 @dp.message_handler(commands=['start'])
 async def start_handler(message: types.Message):
     user_data[message.from_user.id] = {}
-    await go_to_start(message.from_user.id)
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(InlineKeyboardButton("Сообщить о товаре", callback_data="scenario_1"))
+    keyboard.add(InlineKeyboardButton("Товар в вагонах", callback_data="scenario_2"))
+    await message.answer("Выберите следующий вариант:", reply_markup=keyboard)
 
-
-# Шаг 2: Обработка сценария
+# Обработка сценария
 @dp.callback_query_handler(lambda c: c.data.startswith('scenario'))
 async def scenario_handler(callback_query: CallbackQuery):
     scenario = callback_query.data
-    user_data[callback_query.from_user.id] = {'scenario': scenario}
-    
-    if scenario == "scenario_1":
-        # Сообщить о товаре
-        keyboard = InlineKeyboardMarkup(row_width=2)
-        keyboard.add(*[InlineKeyboardButton(name, callback_data=f"cargo_{name}") for name in [
-            "Металлопрокат", "Проволока", "Цемент М500", "Щебень 20х40"
-        ]])
-        await callback_query.message.edit_text("Выберите тип или марку груза:", reply_markup=keyboard)
-    elif scenario == "scenario_2":
-        # Товар в вагонах
-        keyboard = InlineKeyboardMarkup(row_width=2)
-        keyboard.add(*[InlineKeyboardButton(name, callback_data=f"cargo_train_{name}") for name in [
-            "Цемент М400", "Цемент М500", "Щебень 5х10", "Щебень 5х20", "Щебень 10х20", "Щебень 20х40"
-        ]])
-        await callback_query.message.edit_text("Выберите груз из вагонов:", reply_markup=keyboard)
-
-
-# Шаг 3.1: Обработка Металлопрокат или Проволока
-@dp.callback_query_handler(lambda c: c.data.startswith("cargo_"))
-async def cargo_handler(callback_query: CallbackQuery):
-    cargo = callback_query.data.split("_")[1]
-    user_data[callback_query.from_user.id]['cargo'] = cargo
-
-    if cargo in ["Металлопрокат", "Проволока"]:
-        keyboard = InlineKeyboardMarkup(row_width=2)
-        keyboard.add(
-            InlineKeyboardButton("АВ Металл Групп", callback_data="metal_sender_АВ_металл_Групп"),
-            InlineKeyboardButton("Викант", callback_data="metal_sender_Викант"),
-            InlineKeyboardButton("Вартис", callback_data="metal_sender_Вартис"),
-            InlineKeyboardButton("Парк Плюс", callback_data="metal_sender_Парк_Плюс"),
-            InlineKeyboardButton("Указать вручную", callback_data="manual_sender"),
-        )
-        await callback_query.message.edit_text(f"Вы выбрали: {cargo}. Укажите отправителя:", reply_markup=keyboard)
-    else:
-        await callback_query.message.edit_text(f"Вы выбрали: {cargo}. Подтвердите или измените груз.", reply_markup=InlineKeyboardMarkup().add(
-            InlineKeyboardButton("Изменить груз", callback_data="change_cargo"),
-            InlineKeyboardButton("Подтвердить", callback_data="confirm_cargo")
-        ))
-
-
-# Шаг 3.2: Обработка отправителя
-@dp.callback_query_handler(lambda c: c.data.startswith("metal_sender_") or c.data == "manual_sender")
-async def sender_handler(callback_query: CallbackQuery):
-    if callback_query.data == "manual_sender":
-        await callback_query.message.edit_text("Напишите имя отправителя текстом.")
-        user_data[callback_query.from_user.id]['awaiting_sender'] = True
-    else:
-        sender = callback_query.data.split("metal_sender_")[1]
-        user_data[callback_query.from_user.id]['sender'] = sender
-        await confirm_order(callback_query.message, callback_query.from_user.id)
-
-
-@dp.message_handler(lambda message: user_data.get(message.from_user.id, {}).get('awaiting_sender'))
-async def manual_sender_input(message: types.Message):
-    user_data[message.from_user.id]['sender'] = message.text
-    user_data[message.from_user.id]['awaiting_sender'] = False
-    await confirm_order(message, message.from_user.id)
-
-
-async def confirm_order(message, user_id):
-    data = user_data.get(user_id, {})
-    cargo = data.get('cargo', 'не указан')
-    sender = data.get('sender', 'не указан')
-
-    text = f"Подтвердите заказ:\nГруз: {cargo}\nОтправитель: {sender}"
-    keyboard = InlineKeyboardMarkup()
-    keyboard.add(InlineKeyboardButton("Подтвердить", callback_data="confirm_order"))
-    keyboard.add(InlineKeyboardButton("Изменить груз", callback_data="change_cargo"))
-    keyboard.add(InlineKeyboardButton("Изменить отправителя", callback_data="change_sender"))
-    await bot.send_message(user_id, text, reply_markup=keyboard)
-
-
-# Шаг 4: Подтверждение или изменение данных
-@dp.callback_query_handler(lambda c: c.data in ["confirm_order", "change_cargo", "change_sender"])
-async def change_or_confirm(callback_query: CallbackQuery):
-    action = callback_query.data
-    if action == "confirm_order":
-        data = user_data.pop(callback_query.from_user.id, {})
-        if data.get('cargo') in ["Металлопрокат", "Проволока"]:
-            for recipient_id in METAL_RECIPIENTS:
-                await bot.send_message(recipient_id, f"Новый заказ:\nГруз: {data['cargo']}\nОтправитель: {data['sender']}")
-            await callback_query.message.edit_text("Сообщение отправлено в ЛС.")
-        else:
-            await bot.send_message(CHANNEL_ID, f"Новый заказ:\nГруз: {data['cargo']}\nОтправитель: {data['sender']}")
-            await callback_query.message.edit_text("Сообщение отправлено в канал.")
-    elif action == "change_cargo":
-        await scenario_handler(callback_query)
-    elif action == "change_sender":
-        await sender_handler(callback_query)
-
-
-# Шаг 5: Обработка статуса разгрузки
-@dp.callback_query_handler(lambda c: c.data.startswith("cargo_train_"))
-async def train_cargo_handler(callback_query: CallbackQuery):
-    cargo = callback_query.data.split("cargo_train_")[1]
-    user_data[callback_query.from_user.id]['cargo'] = cargo
-
+    user_data[callback_query.from_user.id]['scenario'] = scenario
     keyboard = InlineKeyboardMarkup(row_width=2)
-    keyboard.add(
-        InlineKeyboardButton("Разгружено", callback_data="status_unloaded"),
-        InlineKeyboardButton("Не разгружено", callback_data="status_not_unloaded"),
-    )
-    await callback_query.message.edit_text(f"Вы выбрали груз: {cargo}. Укажите статус разгрузки:", reply_markup=keyboard)
+    keyboard.add(*[InlineKeyboardButton(name, callback_data=f"cargo_{name}") for name in [
+        "Цемент М400", "Цемент М500", "Щебень 5x10", "Щебень 5x20", "Щебень 10x20", "Щебень 20x40", "Проволока", "Металлопрокат"
+    ]])
+    await bot.send_message(callback_query.from_user.id, "Выберите тип или марку/фракцию груза:", reply_markup=keyboard)
 
+# Выбор груза
+@dp.callback_query_handler(lambda c: c.data.startswith('cargo'))
+async def cargo_handler(callback_query: CallbackQuery):
+    cargo = callback_query.data.split('_')[1]
+    user_data[callback_query.from_user.id]['cargo'] = cargo
+
+    # Проверка, нужно ли выбрать отправителя или указать текстом
+    if cargo in ["Проволока", "Металлопрокат"]:
+        keyboard = InlineKeyboardMarkup(row_width=2)
+        keyboard.add(*[InlineKeyboardButton(name, callback_data=f"sender_{name}") for name in [
+            "АВ Металл Групп", "Викант", "Вартис", "Парк Плюс"
+        ]])
+        keyboard.add(InlineKeyboardButton("Написать отправителя", callback_data="custom_sender"))
+        await bot.send_message(callback_query.from_user.id, "Выберите отправителя:", reply_markup=keyboard)
+    else:
+        keyboard = InlineKeyboardMarkup(row_width=2)
+        keyboard.add(InlineKeyboardButton("Кривой Рог Цемент", callback_data="sender_Кривой Рог Цемент"))
+        keyboard.add(InlineKeyboardButton("Написать отправителя", callback_data="custom_sender"))
+        await bot.send_message(callback_query.from_user.id, "Выберите товаро-отправителя:", reply_markup=keyboard)
+
+# Ввод пользовательского отправителя
+@dp.callback_query_handler(lambda c: c.data == "custom_sender")
+async def custom_sender_handler(callback_query: CallbackQuery):
+    await bot.send_message(callback_query.from_user.id, "Введите название отправителя текстом:")
+
+@dp.message_handler()
+async def custom_sender_text_handler(message: types.Message):
+    user_data[message.from_user.id]['sender'] = message.text
+    await ask_unloading_status(message.from_user.id)
+
+# Статус разгрузки
+async def ask_unloading_status(user_id):
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(InlineKeyboardButton("Разгружено", callback_data="status_unloaded"))
+    keyboard.add(InlineKeyboardButton("Не разгружено", callback_data="status_not_unloaded"))
+    await bot.send_message(user_id, "Выберите статус разгрузки:", reply_markup=keyboard)
+
+@dp.callback_query_handler(lambda c: c.data.startswith("status"))
+async def unloading_status_handler(callback_query: CallbackQuery):
+    status = "Разгружено" if callback_query.data == "status_unloaded" else "Не разгружено"
+    user_data[callback_query.from_user.id]['status'] = status
+    await confirm_order(callback_query.from_user.id)
+
+# Подтверждение заказа
+async def confirm_order(user_id):
+    data = user_data[user_id]
+    transport = "Автомобилем" if data['scenario'] == "scenario_1" else "Вагонами"
+    message = (
+        f"Подтвердите:\n"
+        f"Транспортировка: {transport}\n"
+        f"Груз: {data['cargo']}\n"
+        f"Отправитель: {data['sender']}\n"
+        f"Статус разгрузки: {data['status']}"
+    )
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(InlineKeyboardButton("Подтвердить", callback_data="confirm"))
+    keyboard.add(InlineKeyboardButton("Отмена", callback_data="cancel"))
+    await bot.send_message(user_id, message, reply_markup=keyboard)
+
+# Подтверждение и отправка в канал
+@dp.callback_query_handler(lambda c: c.data == "confirm")
+async def confirm_handler(callback_query: CallbackQuery):
+    data = user_data.pop(callback_query.from_user.id, {})
+    transport = "Автомобилем" if data['scenario'] == "scenario_1" else "Вагонами"
+    message = (
+        f"Новый заказ:\n"
+        f"Транспортировка: {transport}\n"
+        f"Груз: {data['cargo']}\n"
+        f"Отправитель: {data['sender']}\n"
+        f"Статус разгрузки: {data['status']}"
+    )
+    await bot.send_message(CHANNEL_ID, message)
+    await bot.send_message(callback_query.from_user.id, "Данные отправлены в канал!")
+
+# Отмена заказа
+@dp.callback_query_handler(lambda c: c.data == "cancel")
+async def cancel_handler(callback_query: CallbackQuery):
+    user_data.pop(callback_query.from_user.id, None)
+    await bot.send_message(callback_query.from_user.id, "Отменено.")
 
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True)
