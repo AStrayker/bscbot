@@ -7,7 +7,7 @@ from aiogram.utils import executor
 
 # Telegram токен
 API_TOKEN = '6072615655:AAHQh3BVU3HNHd3p7vfvE3JsBzfHiG-hNMU'
-CHANNEL_ID = '@precoinmarket_channel
+CHANNEL_ID = '@precoinmarket_channel'
 METAL_RECIPIENTS = [123456789, 987654321]  # ID пользователей для отправки в ЛС
 
 # Временное хранилище данных пользователей
