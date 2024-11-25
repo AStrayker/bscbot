@@ -4,7 +4,9 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQu
 from aiogram.utils import executor
 from aiogram.utils.exceptions import BotBlocked, MessageNotModified
 
-API_TOKEN = '6072615655:AAHQh3BVU3HNHd3p7vfvE3JsBzfHiG-hNMU'  # Замените на токен вашего бота
+API_TOKEN = '6072615655:AAHQh3BVU3HNHd3p7vfvE3JsBzfHiG-hNMU'  # Ваш токен бота
+CHANNEL_ID = '@precoinmarket_channel'  # Канал, куда отправлять сообщения
+
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=API_TOKEN)
@@ -24,10 +26,15 @@ async def handle_errors(update, exception):
         logging.error(f"Update: {update} \n{exception}")
     return True
 
+# Функция сброса состояния и возврата к старту
+async def reset_to_start(user_id, message):
+    user_data.pop(user_id, None)  # Сбрасываем данные пользователя
+    await start_command(message)
+
 # Стартовая команда
 @dp.message_handler(commands=['start'])
 async def start_command(message: types.Message):
-    user_data[message.from_user.id] = {}
+    user_data[message.from_user.id] = {}  # Инициализируем данные пользователя
     keyboard = InlineKeyboardMarkup(row_width=2)
     keyboard.add(
         InlineKeyboardButton("Автомобилями", callback_data="transport_auto"),
@@ -35,7 +42,7 @@ async def start_command(message: types.Message):
     )
     await message.answer("Выберите способ транспортировки:", reply_markup=keyboard)
 
-# Выбор транспортировки
+# Выбор способа транспортировки
 @dp.callback_query_handler(lambda c: c.data.startswith('transport_'))
 async def transport_selected(callback_query: CallbackQuery):
     transport = callback_query.data.split('_')[1]
@@ -85,8 +92,7 @@ async def show_sender_menu(callback_query: CallbackQuery):
         InlineKeyboardButton("СпецКарьер", callback_data="sender_СпецКарьер"),
         InlineKeyboardButton("Смарт Гранит", callback_data="sender_Смарт_Гранит"),
         InlineKeyboardButton("Баловские Пески", callback_data="sender_Баловские_Пески"),
-        InlineKeyboardButton("Любимовский Карьер", callback_data="sender_Любимовский_Карьер"),
-        InlineKeyboardButton("Написать свой вариант", callback_data="sender_custom")
+        InlineKeyboardButton("Любимовский Карьер", callback_data="sender_Любимовский_Карьер")
     )
     await callback_query.message.edit_text("Выберите отправителя:", reply_markup=sender_kb)
 
@@ -94,30 +100,18 @@ async def show_sender_menu(callback_query: CallbackQuery):
 @dp.callback_query_handler(lambda c: c.data.startswith('sender_'))
 async def sender_selected(callback_query: CallbackQuery):
     sender = callback_query.data.split('_')[1]
-    if sender == "custom":
-        await callback_query.message.edit_text("Введите имя отправителя текстом:")
-        user_data[callback_query.from_user.id]['awaiting_sender'] = True
-    else:
-        user_data[callback_query.from_user.id]['sender'] = sender
-        await show_status_menu(callback_query)
-
-# Обработка текстового ввода для отправителя
-@dp.message_handler(lambda message: message.from_user.id in user_data and user_data[message.from_user.id].get('awaiting_sender'))
-async def custom_sender_input(message: types.Message):
-    user_data[message.from_user.id]['sender'] = message.text
-    user_data[message.from_user.id]['awaiting_sender'] = False
-    await show_status_menu(message)
+    user_data[callback_query.from_user.id]['sender'] = sender
+    await show_status_menu(callback_query)
 
 # Меню выбора статуса
-async def show_status_menu(callback_query_or_message):
+async def show_status_menu(callback_query: CallbackQuery):
     status_kb = InlineKeyboardMarkup(row_width=2)
     status_kb.add(
         InlineKeyboardButton("Разгружено", callback_data="status_Разгружено"),
         InlineKeyboardButton("Не разгружено", callback_data="status_Не_разгружено"),
         InlineKeyboardButton("Не указано", callback_data="status_Не_указано")
     )
-    message = callback_query_or_message.message if isinstance(callback_query_or_message, CallbackQuery) else callback_query_or_message
-    await message.edit_text("Выберите статус:", reply_markup=status_kb)
+    await callback_query.message.edit_text("Выберите статус:", reply_markup=status_kb)
 
 # Выбор статуса
 @dp.callback_query_handler(lambda c: c.data.startswith('status_'))
@@ -158,21 +152,20 @@ async def confirm(callback_query: CallbackQuery):
     status = data['status']
 
     await bot.send_message(
-        "@precoinmarket_channel",  # Укажите ID вашего канала
+        CHANNEL_ID,
         f"Новый заказ:\n"
         f"Транспортировка: {transport}\n"
         f"Груз: {cargo}\n"
         f"Отправитель: {sender}\n"
         f"Статус: {status}"
     )
-    await start_command(callback_query.message)
+    await reset_to_start(callback_query.from_user.id, callback_query.message)
 
 # Отмена и возврат к старту
 @dp.callback_query_handler(lambda c: c.data == "cancel")
 async def cancel(callback_query: CallbackQuery):
-    user_data.pop(callback_query.from_user.id, None)
     await callback_query.message.edit_text("Операция отменена. Начинаем сначала.")
-    await start_command(callback_query.message)
+    await reset_to_start(callback_query.from_user.id, callback_query.message)
 
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True)
