@@ -7,7 +7,7 @@ from aiogram.utils import executor
 
 # Telegram токен
 API_TOKEN = '6072615655:AAHQh3BVU3HNHd3p7vfvE3JsBzfHiG-hNMU'
-CHANNEL_ID = '@bsc_ceh'
+CHANNEL_ID = '@precoinmarket_channel'
 
 # Временное хранилище данных пользователей
 user_data = {}
