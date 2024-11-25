@@ -4,8 +4,8 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQu
 from aiogram.utils import executor
 
 # Telegram API Token
-API_TOKEN = 'Ваш_токен'
-CHANNEL_ID = '@Ваш_канал'
+API_TOKEN = '6072615655:AAHQh3BVU3HNHd3p7vfvE3JsBzfHiG-hNMU'
+CHANNEL_ID = '@precoinmarket_channel'
 
 # Temporary storage for user data
 user_data = {}
