@@ -6,8 +6,8 @@ from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.utils import executor
 
 # Telegram токен
-API_TOKEN = 'Ваш_токен_бота'
-CHANNEL_ID = '@Ваш_канал'
+API_TOKEN = '6072615655:AAHQh3BVU3HNHd3p7vfvE3JsBzfHiG-hNMU'
+CHANNEL_ID = '@precoinmarket_channel'
 
 # Временное хранилище данных пользователей
 user_data = {}
