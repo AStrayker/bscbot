@@ -185,14 +185,14 @@ async def confirm_handler(callback_query: CallbackQuery):
 
     message = (
         f"🚛Новое поступление🔔\n"
-        f"_______"
+        f"_______\n"
         f"Транспортировка: {transport}\n"
         f"Груз: {cargo}\n"
         f"Отправитель: {sender}\n"
     )
-    if transport == "🚛Автомобилем":
+    if transport == "Автомобилем":
         message += f"Количество машин: {quantity}\n"
-    elif transport == "🚂Вагонами":
+    elif transport == "Вагонами":
         message += f"Статус: {status}\n"
     
     await bot.send_message(CHANNEL_ID, message)
