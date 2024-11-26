@@ -32,7 +32,7 @@ class OrderState(StatesGroup):
 async def send_start_message(user_id):
     keyboard = InlineKeyboardMarkup(row_width=2)
     keyboard.add(
-        InlineKeyboardButton("А🚛втомобилем", callback_data="transport_auto"),
+        InlineKeyboardButton("🚛Автомобилем", callback_data="transport_auto"),
         InlineKeyboardButton("🚂Вагонами", callback_data="transport_train")
     )
     await bot.send_message(user_id, "Выберите способ транспортировки:", reply_markup=keyboard)
@@ -102,14 +102,12 @@ async def sender_handler(callback_query: CallbackQuery):
     transport = user_data[callback_query.from_user.id].get('transport', '')
 
     if transport == "🚛Автомобилем":
-        # Для автомобилей: Указать количество машин
         keyboard = InlineKeyboardMarkup(row_width=3)
         for i in range(1, 6):
             keyboard.add(InlineKeyboardButton(str(i), callback_data=f"quantity_{i}"))
         await bot.send_message(callback_query.from_user.id, "Укажите количество машин (или введите текстом):", reply_markup=keyboard)
         await OrderState.choosing_quantity.set()
     elif transport == "🚂Вагонами":
-        # Для вагонов: Указать статус
         keyboard = InlineKeyboardMarkup(row_width=2)
         keyboard.add(
             InlineKeyboardButton("🟢Разгружено", callback_data="status_unloaded"),
@@ -190,20 +188,21 @@ async def confirm_handler(callback_query: CallbackQuery):
         f"Груз: {cargo}\n"
         f"Отправитель: {sender}\n"
     )
-    if transport == "Автомобилем":
+    if transport == "🚛Автомобилем":
         message += f"Количество машин: {quantity}\n"
-    elif transport == "Вагонами":
+    elif transport == "🚂Вагонами":
         message += f"Статус: {status}\n"
-    
-    await bot.send_message(CHANNEL_ID, message)
-    await bot.send_message(callback_query.from_user.id, "Данные успешно отправлены!")
 
-# Отмена
+    await bot.send_message(CHANNEL_ID, message)
+    await callback_query.answer("Данные успешно отправлены!")
+    await send_start_message(callback_query.from_user.id)  # Возврат к начальному сообщению
+
+# Шаг 8: Отмена
 @dp.callback_query_handler(lambda c: c.data == "cancel")
 async def cancel_handler(callback_query: CallbackQuery):
     user_data.pop(callback_query.from_user.id, None)
-    await bot.send_message(callback_query.from_user.id, "Отправка данных отменена.")
-    await send_start_message(callback_query.from_user.id)
+    await callback_query.answer("Операция отменена.")
+    await send_start_message(callback_query.from_user.id)  # Возврат к начальному сообщению
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
