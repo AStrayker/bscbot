@@ -24,7 +24,8 @@ dp.middleware.setup(LoggingMiddleware())
 # Шаг 1: Начало сценария
 @dp.message_handler(commands=['start'])
 async def start_handler(message: types.Message):
-    user_data[message.from_user.id] = {}
+    # Очищаем пользовательские данные
+    user_data.pop(message.from_user.id, None)
     keyboard = InlineKeyboardMarkup()
     keyboard.add(InlineKeyboardButton("Сообщить о товаре", callback_data="scenario_1"))
     keyboard.add(InlineKeyboardButton("Товар в вагонах", callback_data="scenario_2"))
@@ -33,29 +34,28 @@ async def start_handler(message: types.Message):
 # Шаг 2: Обработка сценария
 @dp.callback_query_handler(lambda c: c.data.startswith('scenario'))
 async def scenario_handler(callback_query: CallbackQuery):
-    scenario = callback_query.data
-    user_data[callback_query.from_user.id]['scenario'] = scenario
+    user_data[callback_query.from_user.id] = {'scenario': callback_query.data}
     keyboard = InlineKeyboardMarkup(row_width=2)
     keyboard.add(*[InlineKeyboardButton(name, callback_data=f"cargo_{name}") for name in [
         "Песок", "Цемент М500", "Цемент М400", "Щебень 5x10", "Щебень 5x20", "Щебень 10x20", "Щебень 20x40", "Металлопрокат"
     ]])
-    await bot.send_message(callback_query.from_user.id, "Выберите тип или марку/фракцию груза:", reply_markup=keyboard)
+    await callback_query.message.edit_text("Выберите тип или марку/фракцию груза:", reply_markup=keyboard)
 
-# Шаг 3: Выбор отправителя
+# Шаг 3: Выбор груза
 @dp.callback_query_handler(lambda c: c.data.startswith('cargo'))
 async def cargo_handler(callback_query: CallbackQuery):
-    cargo = callback_query.data.split('_')[1]
+    cargo = callback_query.data.split('_', 1)[1]
     user_data[callback_query.from_user.id]['cargo'] = cargo
     keyboard = InlineKeyboardMarkup(row_width=2)
     keyboard.add(*[InlineKeyboardButton(name, callback_data=f"sender_{name}") for name in [
         "Кривой рог цемент", "СпецКарьер", "Смарт Гранит", "Баловские пески", "Любимовский карьер", "Бородавский карьер", "ТОВ МКК №3", "Новатор"
     ]])
-    await bot.send_message(callback_query.from_user.id, "Выберите товаро-отправителя:", reply_markup=keyboard)
+    await callback_query.message.edit_text("Выберите товаро-отправителя:", reply_markup=keyboard)
 
 # Шаг 4: Подтверждение
 @dp.callback_query_handler(lambda c: c.data.startswith('sender'))
 async def sender_handler(callback_query: CallbackQuery):
-    sender = callback_query.data.split('_')[1]
+    sender = callback_query.data.split('_', 1)[1]
     user_data[callback_query.from_user.id]['sender'] = sender
     
     # Формируем текст подтверждения
@@ -72,7 +72,7 @@ async def sender_handler(callback_query: CallbackQuery):
     keyboard.add(InlineKeyboardButton("Подтвердить", callback_data="confirm"))
     keyboard.add(InlineKeyboardButton("Отмена", callback_data="cancel"))
     
-    await bot.send_message(callback_query.from_user.id, message, reply_markup=keyboard)
+    await callback_query.message.edit_text(message, reply_markup=keyboard)
 
 # Шаг 5: Подтверждение и отправка в канал
 @dp.callback_query_handler(lambda c: c.data == "confirm")
@@ -87,13 +87,17 @@ async def confirm_handler(callback_query: CallbackQuery):
     )
     # Отправляем в канал
     await bot.send_message(CHANNEL_ID, message)
-    await bot.send_message(callback_query.from_user.id, "Данные отправлены в канал!")
+    await callback_query.message.edit_text("Данные отправлены в канал!")
+
+    # Возвращаем к началу
+    await start_handler(callback_query.message)
 
 # Шаг 6: Обработка отмены
 @dp.callback_query_handler(lambda c: c.data == "cancel")
 async def cancel_handler(callback_query: CallbackQuery):
     user_data.pop(callback_query.from_user.id, None)
-    await bot.send_message(callback_query.from_user.id, "Отменено.")
+    await callback_query.message.edit_text("Операция отменена. Возвращаюсь к началу...")
+    await start_handler(callback_query.message)
 
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True)
