@@ -177,13 +177,14 @@ async def confirm_order(user_id):
 
 
 @dp.callback_query_handler(lambda c: c.data == "confirm")
-async def confirm_handler(callback_query: CallbackQuery):
+async def confirm_handler(callback_query: CallbackQuery, state: FSMContext):
     user_id = callback_query.from_user.id
     data = user_data.pop(user_id, {})
     if not data:
         await callback_query.answer("Ошибка: данные не найдены.")
         return
 
+    # Формируем сообщение для отправки в канал
     message = (
         f"🚛Новое поступление🔔\n"
         f"_______\n"
@@ -198,13 +199,25 @@ async def confirm_handler(callback_query: CallbackQuery):
 
     await bot.send_message(CHANNEL_ID, message)
     await callback_query.answer("Данные отправлены в канал!")
+    
+    # Завершаем текущие состояния FSM для этого пользователя
+    await state.finish()
+    
+    # Возвращаемся к шагу 2
     await start_handler(callback_query.message)  # Перезапуск сценария
 
 
 @dp.callback_query_handler(lambda c: c.data == "cancel")
-async def cancel_handler(callback_query: CallbackQuery):
+async def cancel_handler(callback_query: CallbackQuery, state: FSMContext):
+    user_id = callback_query.from_user.id
+    
+    # Завершаем текущие состояния FSM для этого пользователя
+    await state.finish()
+    
     await callback_query.answer("Операция отменена.")
+    # Возвращаемся к шагу 2
     await start_handler(callback_query.message)  # Перезапуск сценария
+
 
 
 if __name__ == '__main__':
