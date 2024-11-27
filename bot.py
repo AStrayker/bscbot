@@ -207,16 +207,54 @@ async def confirm_handler(callback_query: CallbackQuery, state: FSMContext):
     await start_handler(callback_query.message)  # Перезапуск сценария
 
 
+@dp.callback_query_handler(lambda c: c.data == "confirm")
+async def confirm_handler(callback_query: CallbackQuery, state: FSMContext):
+    user_id = callback_query.from_user.id
+    data = user_data.pop(user_id, {})
+    if not data:
+        await callback_query.answer("Ошибка: данные не найдены.")
+        return
+
+    # Формируем сообщение для отправки в канал
+    message = (
+        f"🚛Новое поступление🔔\n"
+        f"_______\n"
+        f"Транспортировка: {data.get('transport', 'Не указано')}\n"
+        f"Груз: {data.get('cargo', 'Не указано')}\n"
+        f"Отправитель: {data.get('sender', 'Не указано')}\n"
+    )
+    if data.get('transport') == "🚛Автомобилем":
+        message += f"Количество машин: {data.get('quantity', 'Не указано')}\n"
+    elif data.get('transport') == "🚂Вагонами":
+        message += f"Статус: {data.get('status', 'Не указано')}\n"
+
+    await bot.send_message(CHANNEL_ID, message)
+    await callback_query.answer("Данные отправлены в канал!")
+
+    # Завершаем текущее состояние FSM для этого пользователя
+    await state.finish()
+
+    # Удаляем все данные пользователя, чтобы при перезапуске сценария не было конфликтов
+    user_data.pop(user_id, None)
+
+    # Возвращаем пользователя на шаг 2 (выбор способа транспортировки)
+    await start_handler(callback_query.message)
+
+
 @dp.callback_query_handler(lambda c: c.data == "cancel")
 async def cancel_handler(callback_query: CallbackQuery, state: FSMContext):
     user_id = callback_query.from_user.id
-    
-    # Завершаем текущие состояния FSM для этого пользователя
+
+    # Завершаем текущее состояние FSM для этого пользователя
     await state.finish()
-    
+
+    # Удаляем все данные пользователя
+    user_data.pop(user_id, None)
+
     await callback_query.answer("Операция отменена.")
-    # Возвращаемся к шагу 2
-    await start_handler(callback_query.message)  # Перезапуск сценария
+    # Возвращаем пользователя на шаг 2 (выбор способа транспортировки)
+    await start_handler(callback_query.message)
+
 
 
 
