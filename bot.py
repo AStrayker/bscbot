@@ -254,9 +254,3 @@ async def cancel_handler(callback_query: CallbackQuery, state: FSMContext):
     await callback_query.answer("Операция отменена.")
     # Возвращаем пользователя на шаг 2 (выбор способа транспортировки)
     await start_handler(callback_query.message)
-
-
-
-
-if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True)
