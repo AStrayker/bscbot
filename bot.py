@@ -173,7 +173,7 @@ async def confirm_order(user_id):
 
 # Шаг 7: Подтверждение
 @dp.callback_query_handler(lambda c: c.data == "confirm")
-async def confirm_handler(callback_query: CallbackQuery):
+async def confirm_handler(callback_query: CallbackQuery, state: FSMContext):
     data = user_data.pop(callback_query.from_user.id, {})
     transport = data.get('transport', 'Не указан')
     cargo = data.get('cargo', 'Не указан')
@@ -195,14 +195,23 @@ async def confirm_handler(callback_query: CallbackQuery):
 
     await bot.send_message(CHANNEL_ID, message)
     await callback_query.answer("Данные успешно отправлены!")
+    
+    # Завершаем состояние перед возвратом
+    await state.finish()
+    
     await send_start_message(callback_query.from_user.id)  # Возврат к начальному сообщению
 
 # Шаг 8: Отмена
 @dp.callback_query_handler(lambda c: c.data == "cancel")
-async def cancel_handler(callback_query: CallbackQuery):
+async def cancel_handler(callback_query: CallbackQuery, state: FSMContext):
     user_data.pop(callback_query.from_user.id, None)
     await callback_query.answer("Операция отменена.")
+    
+    # Завершаем состояние перед возвратом
+    await state.finish()
+    
     await send_start_message(callback_query.from_user.id)  # Возврат к начальному сообщению
+
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
