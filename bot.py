@@ -194,11 +194,8 @@ async def confirm_handler(callback_query: CallbackQuery):
 @dp.callback_query_handler(lambda c: c.data == "cancel")
 async def cancel_handler(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
-    await state.finish()  # Очистка состояния
-    user_data.pop(user_id, None)
     await callback_query.answer("Операция отменена.")
     await start_handler(callback_query.message)  # Возвращаем к шагу 2 для нового заказа
 
 if __name__ == '__main__':
-    from aiogram import executor
     executor.start_polling(dp, skip_updates=True)
