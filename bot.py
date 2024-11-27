@@ -124,7 +124,7 @@ async def quantity_handler(callback_query: CallbackQuery, state: FSMContext):
     user_id = callback_query.from_user.id
     quantity = callback_query.data.split('_')[1]
     user_data[user_id]['quantity'] = quantity
-    await state.finish()
+    await state.finish()  # Завершаем состояние
     await confirm_order(user_id)
 
 # Шаг 5: Указание статуса для вагонов
@@ -138,7 +138,7 @@ async def status_handler(callback_query: CallbackQuery, state: FSMContext):
     }
     status = status_map[callback_query.data]
     user_data[user_id]['status'] = status
-    await state.finish()
+    await state.finish()  # Завершаем состояние
     await confirm_order(user_id)
 
 # Шаг 6: Подтверждение данных
@@ -165,6 +165,7 @@ async def confirm_order(user_id):
     )
     await send_message_with_keyboard(user_id, message, keyboard)
 
+# Подтверждение или отмена
 @dp.callback_query_handler(lambda c: c.data == "confirm")
 async def confirm_handler(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
@@ -188,12 +189,13 @@ async def confirm_handler(callback_query: CallbackQuery):
     await bot.send_message(CHANNEL_ID, message)
     await callback_query.answer("Данные отправлены в канал!")
 
-    # Перезапуск сценария и возвращение к шагу 2
-    await transport_handler(callback_query)  # Переход к шагу 2
+    # Завершаем FSM контекст
+    await callback_query.message.answer("Операция завершена.")
+    await transport_handler(callback_query)  # Перезапуск шаг 2
 
+# Отмена операции
 @dp.callback_query_handler(lambda c: c.data == "cancel")
 async def cancel_handler(callback_query: CallbackQuery):
-    user_id = callback_query.from_user.id
     await callback_query.answer("Операция отменена.")
     await transport_handler(callback_query)  # Возвращаемся ко второму шагу
 
