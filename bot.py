@@ -37,7 +37,7 @@ async def send_message_with_keyboard(user_id, text, keyboard):
 # Шаг 1: Начало сценария
 @dp.message_handler(commands=['start'])
 async def start_handler(message: types.Message):
-    user_data[message.from_user.id] = {}
+    user_data[message.from_user.id] = {}  # Очищаем данные перед началом нового сценария
     keyboard = InlineKeyboardMarkup(row_width=2).add(
         InlineKeyboardButton("🚛Автомобилем", callback_data="transport_auto"),
         InlineKeyboardButton("🚂Вагонами", callback_data="transport_train")
@@ -189,15 +189,15 @@ async def confirm_handler(callback_query: CallbackQuery):
     await bot.send_message(CHANNEL_ID, message)
     await callback_query.answer("Данные отправлены в канал!")
 
-    # Завершаем FSM контекст и возвращаемся к шагу 2
-    await callback_query.message.answer("Операция завершена.")
-    await transport_handler(callback_query)  # Перезапуск шаг 2
+    # Завершаем FSM контекст и возвращаемся к шагу 1 (начало процесса)
+    await start_handler(callback_query.message)
 
 # Отмена операции
 @dp.callback_query_handler(lambda c: c.data == "cancel")
 async def cancel_handler(callback_query: CallbackQuery):
     await callback_query.answer("Операция отменена.")
-    await transport_handler(callback_query)  # Возвращаемся ко второму шагу
+    # Завершаем FSM контекст и возвращаемся к шагу 1 (начало процесса)
+    await start_handler(callback_query.message)
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
