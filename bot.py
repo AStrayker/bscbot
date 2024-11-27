@@ -1,3 +1,48 @@
+# bot.py
+import logging
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from aiogram.utils import executor
+from aiogram.dispatcher.filters.state import State, StatesGroup
+from aiogram.dispatcher import FSMContext
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
+
+# Telegram токен
+API_TOKEN = '6072615655:AAHQh3BVU3HNHd3p7vfvE3JsBzfHiG-hNMU'
+CHANNEL_ID = '@precoinmarket_channel'
+
+# Временное хранилище данных пользователей
+user_data = {}
+
+# Настройка логгирования
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Инициализация бота и диспетчера
+bot = Bot(token=API_TOKEN)
+storage = MemoryStorage()
+dp = Dispatcher(bot, storage=storage)
+
+# FSM (состояния)
+class OrderState(StatesGroup):
+    choosing_quantity = State()
+    choosing_status = State()
+
+# Функция для возврата к начальному сообщению
+async def send_start_message(user_id):
+    keyboard = InlineKeyboardMarkup(row_width=2)
+    keyboard.add(
+        InlineKeyboardButton("А🚛втомобилем", callback_data="transport_auto"),
+        InlineKeyboardButton("🚂Вагонами", callback_data="transport_train")
+    )
+    await bot.send_message(user_id, "Выберите способ транспортировки:", reply_markup=keyboard)
+
+# Шаг 1: Начало сценария
+@dp.message_handler(commands=['start'])
+async def start_handler(message: types.Message):
+    user_data[message.from_user.id] = {}
+    await send_start_message(message.from_user.id)
+
 # Функция для отправки сообщения на "Шаг 2: Выбор способа транспортировки"
 async def send_transport_choice(user_id):
     # Убедитесь, что все состояния завершены
