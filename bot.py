@@ -196,10 +196,11 @@ async def confirm_handler(callback_query: CallbackQuery, state: FSMContext):
     await bot.send_message(CHANNEL_ID, message)
     await callback_query.answer("Данные успешно отправлены!")
     
-    # Завершаем состояние перед возвратом
+    # Завершаем все состояния перед возвратом к начальному сообщению
     await state.finish()
     
-    await send_start_message(callback_query.from_user.id)  # Возврат к начальному сообщению
+    # Возвращаемся к начальному сообщению, создавая новую клавиатуру
+    await send_start_message(callback_query.from_user.id)
 
 # Шаг 8: Отмена
 @dp.callback_query_handler(lambda c: c.data == "cancel")
@@ -207,11 +208,18 @@ async def cancel_handler(callback_query: CallbackQuery, state: FSMContext):
     user_data.pop(callback_query.from_user.id, None)
     await callback_query.answer("Операция отменена.")
     
-    # Завершаем состояние перед возвратом
+    # Завершаем все состояния перед возвратом к начальному сообщению
     await state.finish()
     
-    await send_start_message(callback_query.from_user.id)  # Возврат к начальному сообщению
+    # Возвращаемся к начальному сообщению, создавая новую клавиатуру
+    await send_start_message(callback_query.from_user.id)
 
-
-if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True)
+# Функция для отправки начального сообщения с кнопками
+async def send_start_message(user_id):
+    # Создаем новую клавиатуру для начала
+    keyboard = InlineKeyboardMarkup(row_width=2)
+    keyboard.add(
+        InlineKeyboardButton("🚛Автомобилем", callback_data="transport_auto"),
+        InlineKeyboardButton("🚂Вагонами", callback_data="transport_train")
+    )
+    await bot.send_message(user_id, "Выберите способ транспортировки:", reply_markup=keyboard)
