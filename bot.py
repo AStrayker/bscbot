@@ -197,20 +197,15 @@ async def confirm_handler(callback_query: CallbackQuery):
         message += f"Статус: {data.get('status', 'Не указано')}\n"
 
     await bot.send_message(CHANNEL_ID, message)
-    await callback_query.answer("Заказ подтвержден и отправлен.")
-
-    # Возврат к выбору транспорта
-    await start_handler(callback_query.message)
+    await callback_query.answer("Данные отправлены в канал!")
+    await start_handler(callback_query.message)  # Перезапуск сценария
 
 
 @dp.callback_query_handler(lambda c: c.data == "cancel")
 async def cancel_handler(callback_query: CallbackQuery):
-    user_id = callback_query.from_user.id
-    user_data.pop(user_id, None)
-    await callback_query.answer("Заказ отменен.")
-    await start_handler(callback_query.message)
+    await callback_query.answer("Операция отменена.")
+    await start_handler(callback_query.message)  # Перезапуск сценария
 
 
-# Запуск бота
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
