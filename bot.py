@@ -189,7 +189,7 @@ async def confirm_handler(callback_query: CallbackQuery):
     await bot.send_message(CHANNEL_ID, message)
     await callback_query.answer("Данные отправлены в канал!")
 
-    # Завершаем FSM контекст
+    # Завершаем FSM контекст и возвращаемся к шагу 2
     await callback_query.message.answer("Операция завершена.")
     await transport_handler(callback_query)  # Перезапуск шаг 2
 
