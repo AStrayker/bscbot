@@ -1,4 +1,3 @@
-# bot.py
 import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
@@ -28,8 +27,9 @@ class OrderState(StatesGroup):
     choosing_quantity = State()
     choosing_status = State()
 
-# Функция для возврата к начальному сообщению
+# Функция для отправки начального сообщения с кнопками
 async def send_start_message(user_id):
+    # Создаем клавиатуру для начала
     keyboard = InlineKeyboardMarkup(row_width=2)
     keyboard.add(
         InlineKeyboardButton("🚛Автомобилем", callback_data="transport_auto"),
@@ -43,7 +43,7 @@ async def start_handler(message: types.Message):
     user_data[message.from_user.id] = {}
     await send_start_message(message.from_user.id)
 
-# Шаг 2: Выбор груза
+# Шаг 2: Выбор способа транспортировки
 @dp.callback_query_handler(lambda c: c.data.startswith('transport'))
 async def transport_handler(callback_query: CallbackQuery):
     transport_type = "🚛Автомобилем" if callback_query.data == "transport_auto" else "🚂Вагонами"
@@ -195,7 +195,7 @@ async def confirm_handler(callback_query: CallbackQuery, state: FSMContext):
 
     await bot.send_message(CHANNEL_ID, message)
     await callback_query.answer("Данные успешно отправлены!")
-    
+
     # Завершаем все состояния перед возвратом к начальному сообщению
     await state.finish()
     
@@ -214,12 +214,5 @@ async def cancel_handler(callback_query: CallbackQuery, state: FSMContext):
     # Возвращаемся к начальному сообщению, создавая новую клавиатуру
     await send_start_message(callback_query.from_user.id)
 
-# Функция для отправки начального сообщения с кнопками
-async def send_start_message(user_id):
-    # Создаем новую клавиатуру для начала
-    keyboard = InlineKeyboardMarkup(row_width=2)
-    keyboard.add(
-        InlineKeyboardButton("🚛Автомобилем", callback_data="transport_auto"),
-        InlineKeyboardButton("🚂Вагонами", callback_data="transport_train")
-    )
-    await bot.send_message(user_id, "Выберите способ транспортировки:", reply_markup=keyboard)
+if __name__ == '__main__':
+    executor.start_polling(dp, skip_updates=True)
