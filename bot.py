@@ -166,7 +166,7 @@ async def confirm_order(user_id):
     await send_message_with_keyboard(user_id, message, keyboard)
 
 @dp.callback_query_handler(lambda c: c.data == "confirm")
-async def confirm_handler(callback_query: CallbackQuery, state: FSMContext):
+async def confirm_handler(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
     data = user_data.pop(user_id, {})
     if not data:
@@ -188,12 +188,13 @@ async def confirm_handler(callback_query: CallbackQuery, state: FSMContext):
     await bot.send_message(CHANNEL_ID, message)
     await callback_query.answer("Данные отправлены в канал!")
 
-    await start_handler(callback_query.message)  # Возвращаем к шагу 2 для нового заказа
+    # Перезапуск сценария и ожидание новых шагов
+    await start_handler(callback_query.message)
 
 @dp.callback_query_handler(lambda c: c.data == "cancel")
-async def cancel_handler(callback_query: CallbackQuery, state: FSMContext):
+async def cancel_handler(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
-    await state.finish()
+    await state.finish()  # Очистка состояния
     user_data.pop(user_id, None)
     await callback_query.answer("Операция отменена.")
     await start_handler(callback_query.message)  # Возвращаем к шагу 2 для нового заказа
