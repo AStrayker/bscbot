@@ -27,9 +27,9 @@ class OrderState(StatesGroup):
     choosing_quantity = State()
     choosing_status = State()
 
-# Функция для отправки начального сообщения с кнопками
-async def send_start_message(user_id):
-    # Создаем клавиатуру для начала
+# Функция для отправки сообщения на "Шаг 2: Выбор способа транспортировки"
+async def send_transport_choice(user_id):
+    # Создаем клавиатуру для выбора способа транспортировки
     keyboard = InlineKeyboardMarkup(row_width=2)
     keyboard.add(
         InlineKeyboardButton("🚛Автомобилем", callback_data="transport_auto"),
@@ -41,7 +41,7 @@ async def send_start_message(user_id):
 @dp.message_handler(commands=['start'])
 async def start_handler(message: types.Message):
     user_data[message.from_user.id] = {}
-    await send_start_message(message.from_user.id)
+    await send_transport_choice(message.from_user.id)
 
 # Шаг 2: Выбор способа транспортировки
 @dp.callback_query_handler(lambda c: c.data.startswith('transport'))
@@ -196,11 +196,11 @@ async def confirm_handler(callback_query: CallbackQuery, state: FSMContext):
     await bot.send_message(CHANNEL_ID, message)
     await callback_query.answer("Данные успешно отправлены!")
 
-    # Завершаем все состояния перед возвратом к начальному сообщению
+    # Завершаем все состояния перед возвратом к выбору транспортировки
     await state.finish()
     
-    # Возвращаемся к начальному сообщению, создавая новую клавиатуру
-    await send_start_message(callback_query.from_user.id)
+    # Возвращаемся к выбору транспортировки
+    await send_transport_choice(callback_query.from_user.id)
 
 # Шаг 8: Отмена
 @dp.callback_query_handler(lambda c: c.data == "cancel")
@@ -208,11 +208,11 @@ async def cancel_handler(callback_query: CallbackQuery, state: FSMContext):
     user_data.pop(callback_query.from_user.id, None)
     await callback_query.answer("Операция отменена.")
     
-    # Завершаем все состояния перед возвратом к начальному сообщению
+    # Завершаем все состояния перед возвратом к выбору транспортировки
     await state.finish()
     
-    # Возвращаемся к начальному сообщению, создавая новую клавиатуру
-    await send_start_message(callback_query.from_user.id)
+    # Возвращаемся к выбору транспортировки
+    await send_transport_choice(callback_query.from_user.id)
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
