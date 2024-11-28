@@ -173,6 +173,7 @@ async def confirm_order(user_id):
         InlineKeyboardButton("✅ Подтвердить", callback_data="confirm"),
         InlineKeyboardButton("❌ Отменить", callback_data="cancel")
     )
+
     await send_message_with_keyboard(user_id, message, keyboard)
 
 # Подтверждение или отмена
