@@ -178,16 +178,16 @@ async def confirm_order(user_id):
 
 # Подтверждение или отмена
 @dp.callback_query_handler(lambda c: c.data == "confirm", state="*")
-async def confirm_handler(callback_query: CallbackQuery):
+async def confirm_handler(callback_query: CallbackQuery, state: FSMContext):
     user_id = callback_query.from_user.id
     await bot.send_message(user_id, "Ваш заказ успешно подтвержден!")
-    await choose_transport(callback_query.message)
+    await choose_transport(callback_query.message)  # Возвращаем пользователя в начало процесса
 
 @dp.callback_query_handler(lambda c: c.data == "cancel", state="*")
-async def cancel_handler(callback_query: CallbackQuery):
+async def cancel_handler(callback_query: CallbackQuery, state: FSMContext):
     user_id = callback_query.from_user.id
     await bot.send_message(user_id, "Ваш заказ отменен.")
-    await choose_transport(callback_query.message)
+    await choose_transport(callback_query.message)  # Возвращаем пользователя в начало процесса
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
