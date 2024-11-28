@@ -171,23 +171,21 @@ async def confirm_order(user_id):
 
     keyboard = InlineKeyboardMarkup(row_width=2).add(
         InlineKeyboardButton("✅ Подтвердить", callback_data="confirm"),
-        InlineKeyboardButton("❌ Отменить", callback_data="cancel")
+        InlineKeyboardButton("❌ Отмена", callback_data="cancel")
     )
     await send_message_with_keyboard(user_id, message, keyboard)
 
-# Подтверждение
 @dp.callback_query_handler(lambda c: c.data == "confirm", state="*")
 async def confirm_handler(callback_query: CallbackQuery, state: FSMContext):
     user_id = callback_query.from_user.id
     await bot.send_message(user_id, "Ваш заказ успешно подтвержден!")
-    await choose_transport(callback_query.message)  # Возвращаем пользователя к шагу 2
+    await choose_transport(callback_query.message)  # Возвращаем к шагу 2
 
-# Отмена
 @dp.callback_query_handler(lambda c: c.data == "cancel", state="*")
 async def cancel_handler(callback_query: CallbackQuery, state: FSMContext):
     user_id = callback_query.from_user.id
     await bot.send_message(user_id, "Ваш заказ отменен.")
-    await choose_transport(callback_query.message)  # Возвращаем пользователя к шагу 2
+    await choose_transport(callback_query.message)  # Возвращаем к шагу 2
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
