@@ -68,7 +68,6 @@ async def cargo_handler(callback_query: CallbackQuery):
     user_data[user_id]['cargo'] = cargo
 
     if cargo == "Металлопрокат":
-        # Показываем два типа металлопроката
         keyboard = InlineKeyboardMarkup(row_width=2).add(
             InlineKeyboardButton("Проволока", callback_data="metal_provoloka"),
             InlineKeyboardButton("Металлопрокат", callback_data="metal_metal")
@@ -83,27 +82,10 @@ async def metal_handler(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
     metal_type = "Проволока" if callback_query.data == "metal_provoloka" else "Металлопрокат"
     user_data[user_id]['cargo'] = metal_type
-    
-    # В зависимости от типа металлопроката, показываем разные варианты отправителей
-    if metal_type == "Проволока":
-        await choose_sender_for_provoloka(user_id)
-    else:
-        await choose_sender_for_metalloprokat(user_id)
+    await choose_sender(user_id)
 
-# Шаг 4: Выбор отправителя для Проволоки
-async def choose_sender_for_provoloka(user_id):
-    # Для проволоки другие отправители
-    sender_options = [
-        "Компания А", "Компания Б", "Компания В"
-    ]
-    keyboard = InlineKeyboardMarkup(row_width=2)
-    keyboard.add(*(InlineKeyboardButton(sender, callback_data=f"sender_{sender}") for sender in sender_options))
-
-    await send_message_with_keyboard(user_id, "Выберите отправителя для проволоки:", keyboard)
-
-# Шаг 4: Выбор отправителя для Металлопроката
-async def choose_sender_for_metalloprokat(user_id):
-    # Для металлопроката другие отправители
+# Шаг 4: Выбор отправителя
+async def choose_sender(user_id):
     sender_options = [
         "Кривой Рог Цемент", "СпецКарьер", "Смарт Гранит",
         "Баловские Пески", "Любимовский Карьер", "ТОВ МКК №3", "Новатор"
@@ -111,9 +93,8 @@ async def choose_sender_for_metalloprokat(user_id):
     keyboard = InlineKeyboardMarkup(row_width=2)
     keyboard.add(*(InlineKeyboardButton(sender, callback_data=f"sender_{sender}") for sender in sender_options))
 
-    await send_message_with_keyboard(user_id, "Выберите отправителя для металлопроката:", keyboard)
+    await send_message_with_keyboard(user_id, "Выберите отправителя:", keyboard)
 
-# Шаг 5: Обработка отправителя
 @dp.callback_query_handler(lambda c: c.data.startswith('sender'))
 async def sender_handler(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
@@ -136,7 +117,6 @@ async def sender_handler(callback_query: CallbackQuery):
         )
         await send_message_with_keyboard(user_id, "Укажите статус:", keyboard)
         await OrderState.choosing_status.set()
-
 
 # Шаг 5: Указание количества машин
 @dp.callback_query_handler(lambda c: c.data.startswith('quantity'), state=OrderState.choosing_quantity)
@@ -201,19 +181,19 @@ async def confirm_handler(callback_query: CallbackQuery):
         f"Груз: {data.get('cargo', 'Не указано')}\n"
         f"Отправитель: {data.get('sender', 'Не указано')}\n"
     )
-    if data.get('transport') == "🚛Автомобилем":
-        message += f"Количество машин: {data.get('quantity', 'Не указано')}\n"
-    elif data.get('transport') == "🚂Вагонами":
-        message += f"Статус: {data.get('status', 'Не указано')}\n"
-
+  # Отправляем в канал
     await bot.send_message(CHANNEL_ID, message)
-    await callback_query.answer("Данные отправлены в канал!")
-    await start_handler(callback_query.message)  # Перезапуск сценария
+    await callback_query.message.edit_text("Данные отправлены в канал!")
 
+    # Возвращаем к началу
+    await start_handler(callback_query.message)
+
+# Шаг 6: Обработка отмены
 @dp.callback_query_handler(lambda c: c.data == "cancel")
 async def cancel_handler(callback_query: CallbackQuery):
-    await callback_query.answer("Операция отменена.")
-    await start_handler(callback_query.message)  # Перезапуск сценария
+    user_data.pop(callback_query.from_user.id, None)
+    await callback_query.message.edit_text("Операция отменена. Возвращаюсь к началу...")
+    await start_handler(callback_query.message)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True)
