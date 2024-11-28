@@ -38,13 +38,16 @@ async def send_message_with_keyboard(user_id, text, keyboard):
 @dp.message_handler(commands=['start'])
 async def start_handler(message: types.Message):
     user_data[message.from_user.id] = {}  # Очищаем данные перед началом нового сценария
+    await choose_transport(message)
+
+# Шаг 2: Выбор способа транспортировки
+async def choose_transport(message):
     keyboard = InlineKeyboardMarkup(row_width=2).add(
         InlineKeyboardButton("🚛Автомобилем", callback_data="transport_auto"),
         InlineKeyboardButton("🚂Вагонами", callback_data="transport_train")
     )
     await send_message_with_keyboard(message.from_user.id, "Выберите способ транспортировки:", keyboard)
 
-# Шаг 2: Выбор способа транспортировки
 @dp.callback_query_handler(lambda c: c.data.startswith('transport'))
 async def transport_handler(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
@@ -174,28 +177,20 @@ async def confirm_handler(callback_query: CallbackQuery):
         await callback_query.answer("Ошибка: данные не найдены.")
         return
 
-    message = (
-        f"🚛Новое поступление🔔\n"
-        f"_______\n"
-        f"Транспортировка: {data.get('transport', 'Не указано')}\n"
-        f"Груз: {data.get('cargo', 'Не указано')}\n"
-        f"Отправитель: {data.get('sender', 'Не указано')}\n"
-    )
-    if data.get('transport') == "🚛Автомобилем":
-        message += f"Количество машин: {data.get('quantity', 'Не указано')}\n"
-    elif data.get('transport') == "🚂Вагонами":
-        message += f"Статус: {data.get('status', 'Не указано')}\n"
-
-    # Отправляем сообщение в канал
+    message = "Ваш заказ был успешно отправлен!"
     await bot.send_message(CHANNEL_ID, message)
 
-    await callback_query.answer("Ваш заказ успешно оформлен!")
+    # Возвращаем к выбору транспортировки
+    await choose_transport(callback_query.message)
 
 @dp.callback_query_handler(lambda c: c.data == "cancel")
 async def cancel_handler(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
     user_data.pop(user_id, None)  # Удаляем данные
-    await bot.send_message(user_id, "Заказ отменен. Для начала снова введите /start.")
+    await callback_query.answer("Ваш заказ отменен.")
+
+    # Возвращаем к выбору транспортировки
+    await choose_transport(callback_query.message)
 
 # Запуск бота
 if __name__ == '__main__':
