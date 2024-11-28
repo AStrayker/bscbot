@@ -2,10 +2,9 @@ import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiogram.utils import executor
-from aiogram.dispatcher import FSMContext
 
 # Telegram токен
-API_TOKEN = '6072615655:AAHQh3BVU3HNHd3p7vfvE3JsBzfHiG-hNMU'
+API_TOKEN = 'YOUR_API_TOKEN'
 CHANNEL_ID = '@precoinmarket_channel'
 
 # Временное хранилище данных пользователей
@@ -77,29 +76,30 @@ async def choose_sender(user_id):
 
     await send_message_with_keyboard(user_id, "Выберите отправителя:", keyboard)
 
-# Шаг 5: Выбор количества машин
-@dp.callback_query_handler(lambda c: c.data.startswith('quantity'))
-async def quantity_handler(callback_query: CallbackQuery):
+# Шаг 5: Подтверждение
+@dp.callback_query_handler(lambda c: c.data.startswith('sender'))
+async def sender_handler(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
-    quantity = callback_query.data.split('_')[1]
-    user_data[user_id]['quantity'] = quantity
+    sender = callback_query.data.split('_')[1]
+    user_data[user_id]['sender'] = sender
 
-    # Формирование итогового сообщения
-    transport = user_data[user_id].get('transport', '')
-    cargo = user_data[user_id].get('cargo', '')
-    sender = user_data[user_id].get('sender', '')
-    message = f"Ваш заказ подтвержден!\n\nТранспорт: {transport}\nГруз: {cargo}\nОтправитель: {sender}\nКоличество машин: {quantity}"
+    # Формируем текст подтверждения
+    data = user_data[user_id]
+    transport = "Автомобилем" if data['transport'] == "🚛Автомобилем" else "Вагонами"
+    message = (
+        f"Подтвердите:\n"
+        f"Транспортировка: {transport}\n"
+        f"Груз: {data['cargo']}\n"
+        f"Отправитель: {data['sender']}"
+    )
 
-    # Отправка подтверждения в канал
-    await bot.send_message(CHANNEL_ID, message)
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(InlineKeyboardButton("Подтвердить", callback_data="confirm"))
+    keyboard.add(InlineKeyboardButton("Отмена", callback_data="cancel"))
 
-    # Уведомление для пользователя
-    await callback_query.message.edit_text("Ваш заказ успешно подтвержден!")
+    await callback_query.message.edit_text(message, reply_markup=keyboard)
 
-    # Возврат к шагу 2 с кнопками для выбора способа транспортировки
-    await transport_step(callback_query.message)
-
-# Шаг 6: Подтверждение
+# Подтверждение
 @dp.callback_query_handler(lambda c: c.data == "confirm")
 async def confirm_handler(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
@@ -117,7 +117,7 @@ async def confirm_handler(callback_query: CallbackQuery):
     # Возврат к шагу 2 с кнопками для выбора способа транспортировки
     await transport_step(callback_query.message)
 
-# Шаг 7: Отмена
+# Шаг 6: Отмена
 @dp.callback_query_handler(lambda c: c.data == "cancel")
 async def cancel_handler(callback_query: CallbackQuery):
     await callback_query.message.edit_text("Ваш заказ отменен.")
