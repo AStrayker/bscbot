@@ -83,26 +83,27 @@ async def choose_sender(callback_query: CallbackQuery):
 
     await callback_query.message.edit_text("Выберите отправителя:", reply_markup=keyboard)
 
-# Шаг 5: Подтверждение данных
-@dp.callback_query_handler(lambda c: c.data.startswith('sender'))
-async def sender_handler(callback_query: CallbackQuery):
+# Шаг 5: Выбор количества машин
+@dp.callback_query_handler(lambda c: c.data.startswith('quantity'))
+async def quantity_handler(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
-    sender = callback_query.data.split('_')[1]
-    user_data[user_id]['sender'] = sender
+    quantity = callback_query.data.split('_')[1]
+    user_data[user_id]['quantity'] = quantity
 
+    # Формирование итогового сообщения
     transport = user_data[user_id].get('transport', '')
-    if transport == "🚛Автомобилем":
-        keyboard = InlineKeyboardMarkup(row_width=3).add(
-            *(InlineKeyboardButton(str(i), callback_data=f"quantity_{i}") for i in range(1, 6))
-        )
-        await callback_query.message.edit_text("Укажите количество машин (или введите текстом):", reply_markup=keyboard)
-    elif transport == "🚂Вагонами":
-        keyboard = InlineKeyboardMarkup(row_width=2).add(
-            InlineKeyboardButton("🟢Разгружено", callback_data="status_unloaded"),
-            InlineKeyboardButton("🟡Не разгружено", callback_data="status_not_unloaded"),
-            InlineKeyboardButton("🟠Не указано", callback_data="status_not_specified")
-        )
-        await callback_query.message.edit_text("Укажите статус:", reply_markup=keyboard)
+    cargo = user_data[user_id].get('cargo', '')
+    sender = user_data[user_id].get('sender', '')
+    message = f"Ваш заказ подтвержден!\n\nТранспорт: {transport}\nГруз: {cargo}\nОтправитель: {sender}\nКоличество машин: {quantity}"
+
+    # Отправка подтверждения в канал
+    await bot.send_message(CHANNEL_ID, message)
+
+    # Уведомление для пользователя
+    await callback_query.message.edit_text("Ваш заказ успешно подтвержден!")
+
+    # Возврат к шагу 2 с кнопками для выбора способа транспортировки
+    await choose_transport(callback_query.message)
 
 # Шаг 6: Подтверждение
 @dp.callback_query_handler(lambda c: c.data == "confirm")
@@ -112,13 +113,13 @@ async def confirm_handler(callback_query: CallbackQuery):
 
     # Формирование сообщения
     message = f"Ваш заказ подтвержден!\n\nТранспорт: {data.get('transport')}\nГруз: {data.get('cargo')}\nОтправитель: {data.get('sender')}"
-    
+
     # Отправка подтверждения в канал
     await bot.send_message(CHANNEL_ID, message)
 
     # Уведомление для пользователя
     await callback_query.message.edit_text("Ваш заказ успешно подтвержден!")
-    
+
     # Возврат к шагу 2 с кнопками для выбора способа транспортировки
     await choose_transport(callback_query.message)
 
@@ -126,7 +127,7 @@ async def confirm_handler(callback_query: CallbackQuery):
 @dp.callback_query_handler(lambda c: c.data == "cancel")
 async def cancel_handler(callback_query: CallbackQuery):
     await callback_query.message.edit_text("Ваш заказ отменен.")
-    
+
     # Возврат к шагу 2
     await choose_transport(callback_query.message)
 
@@ -136,6 +137,17 @@ async def choose_transport(message: types.Message):
     keyboard.add(InlineKeyboardButton("🚛Автомобилем", callback_data="transport_auto"))
     keyboard.add(InlineKeyboardButton("🚂Вагонами", callback_data="transport_train"))
     await message.answer("Выберите способ транспортировки:", reply_markup=keyboard)
+
+# Функция для отправки кнопок выбора количества
+async def choose_quantity(message: types.Message):
+    keyboard = InlineKeyboardMarkup(row_width=3)
+    # Добавление кнопок с количеством машин
+    keyboard.add(InlineKeyboardButton("1", callback_data="quantity_1"))
+    keyboard.add(InlineKeyboardButton("2", callback_data="quantity_2"))
+    keyboard.add(InlineKeyboardButton("3", callback_data="quantity_3"))
+    keyboard.add(InlineKeyboardButton("4", callback_data="quantity_4"))
+    keyboard.add(InlineKeyboardButton("5", callback_data="quantity_5"))
+    await message.answer("Выберите количество машин:", reply_markup=keyboard)
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
