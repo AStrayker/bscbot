@@ -181,19 +181,22 @@ async def confirm_handler(callback_query: CallbackQuery):
         f"Груз: {data.get('cargo', 'Не указано')}\n"
         f"Отправитель: {data.get('sender', 'Не указано')}\n"
     )
-  # Отправляем в канал
+    if data.get('transport') == "🚛Автомобилем":
+        message += f"Количество машин: {data.get('quantity', 'Не указано')}\n"
+    elif data.get('transport') == "🚂Вагонами":
+        message += f"Статус: {data.get('status', 'Не указано')}\n"
+
+    # Отправляем сообщение в канал
     await bot.send_message(CHANNEL_ID, message)
-    await callback_query.message.edit_text("Данные отправлены в канал!")
 
-    # Возвращаем к началу
-    await start_handler(callback_query.message)
+    await callback_query.answer("Ваш заказ успешно оформлен!")
 
-# Шаг 6: Обработка отмены
 @dp.callback_query_handler(lambda c: c.data == "cancel")
 async def cancel_handler(callback_query: CallbackQuery):
-    user_data.pop(callback_query.from_user.id, None)
-    await callback_query.message.edit_text("Операция отменена. Возвращаюсь к началу...")
-    await start_handler(callback_query.message)
+    user_id = callback_query.from_user.id
+    user_data.pop(user_id, None)  # Удаляем данные
+    await bot.send_message(user_id, "Заказ отменен. Для начала снова введите /start.")
 
-if __name__ == "__main__":
+# Запуск бота
+if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
