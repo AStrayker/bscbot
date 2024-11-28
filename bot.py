@@ -4,7 +4,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQu
 from aiogram.utils import executor
 
 # Telegram токен
-API_TOKEN = 'YOUR_API_TOKEN'
+API_TOKEN = '6072615655:AAHQh3BVU3HNHd3p7vfvE3JsBzfHiG-hNMU'
 CHANNEL_ID = '@precoinmarket_channel'
 
 # Временное хранилище данных пользователей
@@ -112,7 +112,7 @@ async def confirm_handler(callback_query: CallbackQuery):
     await bot.send_message(CHANNEL_ID, message)
 
     # Уведомление для пользователя
-    await callback_query.message.edit_text("Ваш заказ успешно подтвержден!")
+    await callback_query.message.edit_text("Ваш заказ успешно подтвержден! Чтобы продолжить нажмите /start")
 
     # Возврат к шагу 2 с кнопками для выбора способа транспортировки
     await transport_step(callback_query.message)
