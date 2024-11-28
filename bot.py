@@ -68,6 +68,7 @@ async def cargo_handler(callback_query: CallbackQuery):
     user_data[user_id]['cargo'] = cargo
 
     if cargo == "Металлопрокат":
+        # Показываем два типа металлопроката
         keyboard = InlineKeyboardMarkup(row_width=2).add(
             InlineKeyboardButton("Проволока", callback_data="metal_provoloka"),
             InlineKeyboardButton("Металлопрокат", callback_data="metal_metal")
@@ -82,10 +83,27 @@ async def metal_handler(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
     metal_type = "Проволока" if callback_query.data == "metal_provoloka" else "Металлопрокат"
     user_data[user_id]['cargo'] = metal_type
-    await choose_sender(user_id)
+    
+    # В зависимости от типа металлопроката, показываем разные варианты отправителей
+    if metal_type == "Проволока":
+        await choose_sender_for_provoloka(user_id)
+    else:
+        await choose_sender_for_metalloprokat(user_id)
 
-# Шаг 4: Выбор отправителя
-async def choose_sender(user_id):
+# Шаг 4: Выбор отправителя для Проволоки
+async def choose_sender_for_provoloka(user_id):
+    # Для проволоки другие отправители
+    sender_options = [
+        "Компания А", "Компания Б", "Компания В"
+    ]
+    keyboard = InlineKeyboardMarkup(row_width=2)
+    keyboard.add(*(InlineKeyboardButton(sender, callback_data=f"sender_{sender}") for sender in sender_options))
+
+    await send_message_with_keyboard(user_id, "Выберите отправителя для проволоки:", keyboard)
+
+# Шаг 4: Выбор отправителя для Металлопроката
+async def choose_sender_for_metalloprokat(user_id):
+    # Для металлопроката другие отправители
     sender_options = [
         "Кривой Рог Цемент", "СпецКарьер", "Смарт Гранит",
         "Баловские Пески", "Любимовский Карьер", "ТОВ МКК №3", "Новатор"
@@ -93,8 +111,9 @@ async def choose_sender(user_id):
     keyboard = InlineKeyboardMarkup(row_width=2)
     keyboard.add(*(InlineKeyboardButton(sender, callback_data=f"sender_{sender}") for sender in sender_options))
 
-    await send_message_with_keyboard(user_id, "Выберите отправителя:", keyboard)
+    await send_message_with_keyboard(user_id, "Выберите отправителя для металлопроката:", keyboard)
 
+# Шаг 5: Обработка отправителя
 @dp.callback_query_handler(lambda c: c.data.startswith('sender'))
 async def sender_handler(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
@@ -117,6 +136,7 @@ async def sender_handler(callback_query: CallbackQuery):
         )
         await send_message_with_keyboard(user_id, "Укажите статус:", keyboard)
         await OrderState.choosing_status.set()
+
 
 # Шаг 5: Указание количества машин
 @dp.callback_query_handler(lambda c: c.data.startswith('quantity'), state=OrderState.choosing_quantity)
