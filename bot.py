@@ -188,12 +188,21 @@ async def confirm_handler(callback_query: CallbackQuery):
 
     await bot.send_message(CHANNEL_ID, message)
     await callback_query.answer("Данные отправлены в канал!")
-    await transport_handler(callback_query.message)  # Перезапуск сценария
+    
+    # Возврат на выбор способа транспортировки
+    await start_handler(callback_query.message)  # Перезапуск сценария, т.е. Шаг 1
 
 @dp.callback_query_handler(lambda c: c.data == "cancel")
 async def cancel_handler(callback_query: CallbackQuery):
+    user_id = callback_query.from_user.id
+    # Очистим данные пользователя перед возвратом
+    if user_id in user_data:
+        del user_data[user_id]
+    
     await callback_query.answer("Операция отменена.")
-    await transport_handler(callback_query.message)  # Перезапуск сценария
+    # Перезапуск с выбора транспортировки (Шаг 2)
+    await start_handler(callback_query.message)  # Перезапуск сценария
+
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
