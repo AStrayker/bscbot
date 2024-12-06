@@ -5,7 +5,7 @@ from aiogram.utils import executor
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
 # Telegram токен
-API_TOKEN = 'YOUR_API_TOKEN'
+API_TOKEN = '7728310907:AAFNSOGBWupK6RCXuf0YRA26ex69hTycS5I'
 CHANNEL_ID = '@precoinmarket_channel'
 
 # Настройка логгирования
