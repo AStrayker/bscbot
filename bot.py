@@ -10,18 +10,6 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 API_TOKEN = '6072615655:AAHQh3BVU3HNHd3p7vfvE3JsBzfHiG-hNMU'
 CHANNEL_ID = '@recoinmarket_channel'
 
-import logging
-from aiogram import Bot, Dispatcher, types
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-from aiogram.utils import executor
-from aiogram.dispatcher.filters.state import State, StatesGroup
-from aiogram.dispatcher import FSMContext
-from aiogram.contrib.fsm_storage.memory import MemoryStorage
-
-# Telegram токен
-API_TOKEN = 'YOUR_BOT_API_TOKEN'
-CHANNEL_ID = '@your_channel'
-
 # Настройка логгирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -183,6 +171,7 @@ async def confirm_order(user_id):
         InlineKeyboardButton("✅ Подтвердить", callback_data="confirm"),
         InlineKeyboardButton("❌ Отменить", callback_data="cancel")
     )
+
     await send_message_with_keyboard(user_id, message, keyboard)
     await OrderState.confirming.set()  # Переход к подтверждению
 
@@ -194,7 +183,6 @@ async def confirm_handler(callback_query: CallbackQuery, state: FSMContext):
     await callback_query.answer()
     user_data.pop(user_id, None)  # Очистить данные после подтверждения
     await state.finish()
-    await start_handler(callback_query.message)  # Перезапуск сценария
 
 @dp.callback_query_handler(lambda c: c.data == "cancel", state=OrderState.confirming)
 async def cancel_handler(callback_query: CallbackQuery, state: FSMContext):
@@ -203,7 +191,6 @@ async def cancel_handler(callback_query: CallbackQuery, state: FSMContext):
     await bot.send_message(user_id, "Ваш заказ был отменен.")
     await callback_query.answer()
     await state.finish()
-    await start_handler(callback_query.message)  # Перезапуск сценария
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)
