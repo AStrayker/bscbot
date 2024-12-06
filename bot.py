@@ -8,7 +8,7 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
 # Telegram токен
 API_TOKEN = '6072615655:AAHQh3BVU3HNHd3p7vfvE3JsBzfHiG-hNMU'
-CHANNEL_ID = '@recoinmarket_channel'
+CHANNEL_ID = '@precoinmarket_channel'
 
 # Настройка логгирования
 logging.basicConfig(level=logging.INFO)
