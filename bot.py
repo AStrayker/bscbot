@@ -179,7 +179,7 @@ async def confirm_order(user_id):
 @dp.callback_query_handler(lambda c: c.data == "confirm", state=OrderState.confirming)
 async def confirm_handler(callback_query: CallbackQuery, state: FSMContext):
     user_id = callback_query.from_user.id
-    await bot.send_message(user_id, "Ваш заказ подтвержден!")
+    await bot.send_message(user_id, "Ваш заказ подтвержден! Заново - start")
     await callback_query.answer()
     user_data.pop(user_id, None)  # Очистить данные после подтверждения
     await state.finish()
