@@ -187,14 +187,21 @@ async def confirm_handler(callback_query: CallbackQuery):
 
     await bot.send_message(CHANNEL_ID, message)
     await callback_query.answer("Данные отправлены в канал!")
-    # Возврат к этапу выбора способа транспортировки
-    await transport_handler(callback_query)
-
-@dp.callback_query_handler(lambda c: c.data == "cancel")
-async def cancel_handler(callback_query: CallbackQuery):
+# Выбор способа транспортировки
+@dp.callback_query_handler(lambda c: c.data.startswith('transport'))
+async def transport_handler(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
-    user_data.pop(user_id, None)
-    await callback_query.message.edit_text("Вы отменили ввод. Начните заново с /start.")
+    transport_type = "🚛Автомобилем" if callback_query.data == "transport_auto" else "🚂Вагонами"
+    user_data[user_id]['transport'] = transport_type
+
+    cargo_options = [
+        "Песок", "Цемент М500", "Цемент М400", "Щебень 5x10",
+        "Щебень 5x20", "Щебень 10x20", "Щебень 20x40", "Металлопрокат"
+    ]
+    keyboard = InlineKeyboardMarkup(row_width=2)
+    keyboard.add(*(InlineKeyboardButton(cargo, callback_data=f"cargo_{cargo}") for cargo in cargo_options))
+
+    await send_message_with_keyboard(user_id, "Выберите груз:", keyboard)
 
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True)
