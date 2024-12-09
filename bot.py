@@ -55,7 +55,7 @@ async def transport_handler(callback_query: CallbackQuery):
     user_data[user_id]['transport'] = transport_type
 
     cargo_options = [
-        "Песок", "Цемент М500", "Цемент М400", "Щебень 5x10",
+        "Песок1", "Цемент М500", "Цемент М400", "Щебень 5x10",
         "Щебень 5x20", "Щебень 10x20", "Щебень 20x40", "Металлопрокат"
     ]
     keyboard = InlineKeyboardMarkup(row_width=2)
