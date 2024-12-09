@@ -1,4 +1,3 @@
-
 import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
@@ -8,7 +7,7 @@ from aiogram.dispatcher import FSMContext
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
 # Telegram токен
-API_TOKEN = '6072615655:AAHQh3BVU3HNHd3p7vfvE3JsBzfHiG-hNMU'
+API_TOKEN = 'Ваш_токен_здесь'
 CHANNEL_ID = '@precoinmarket_channel'
 
 # Настройка логгирования
