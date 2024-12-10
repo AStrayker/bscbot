@@ -190,13 +190,28 @@ async def confirm_handler(callback_query: CallbackQuery):
         f"Транспортировка: {data.get('transport', 'Не указано')}\n"
         f"Груз: {data.get('cargo', 'Не указано')}\n"
         f"Отправитель: {data.get('sender', 'Не указано')}\n"
-   )
-        await message.answer("Данные успешно отправлены в канал!")
-    else:
-        await message.answer("Отправка отменена.")
-    user_data.pop(message.from_user.id, None)
-    await start_handler(message)
+    )
+    if data.get('transport') == "🚛Автомобилем":
+        message += f"Количество машин: {data.get('quantity', 'Не указано')}\n"
+    elif data.get('transport') == "🚂Вагонами":
+        message += f"Статус: {data.get('status', 'Не указано')}\n"
+
+    try:
+        await bot.send_message(CHANNEL_ID, message)
+        await callback_query.message.answer("Данные успешно отправлены в канал!")
+    except Exception as e:
+        logger.error(f"Ошибка отправки в канал: {e}")
+        await callback_query.message.answer("Ошибка при отправке в канал.")
+
+    await start_handler(types.Message(chat=callback_query.message.chat, from_user=callback_query.from_user))
+
+
+@dp.callback_query_handler(lambda c: c.data == "cancel")
+async def cancel_handler(callback_query: CallbackQuery):
+    user_id = callback_query.from_user.id
+    user_data.pop(user_id, None)
+    await callback_query.message.edit_text("Вы отменили ввод. Начните заново с /start.")
+
 
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True)
-# файл: telegram_transport_bot.py
