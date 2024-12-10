@@ -201,7 +201,7 @@ async def confirm_handler(callback_query: CallbackQuery):
         await callback_query.message.answer("Ошибка при отправке в канал.")
 
     # Возврат к шагу 2
-    await send_transport_choice(user_id)
+async def send_transport_choice(user_id):
 
 
 @dp.callback_query_handler(lambda c: c.data == "cancel")
