@@ -186,7 +186,7 @@ async def confirm_handler(callback_query: CallbackQuery):
     await bot.send_message(CHANNEL_ID, message)
     await callback_query.answer("Данные успешно отправлены.")
     # Возврат к шагу 2
-    await step_2_transport(user_id)
+    async def step_2_transport(user_id):)
 
 @dp.callback_query_handler(lambda c: c.data == "cancel")
 async def cancel_handler(callback_query: CallbackQuery):
