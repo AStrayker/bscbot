@@ -37,14 +37,17 @@ async def send_message_with_keyboard(user_id, text, keyboard):
 # Начало сценария
 @dp.message_handler(commands=['start'])
 async def start_handler(message: types.Message):
-    user_data[message.from_user.id] = {}
+    await show_transport_options(message.from_user.id)
+
+# Выбор способа транспортировки
+async def show_transport_options(user_id):
+    user_data[user_id] = {}  # Сброс пользовательских данных
     keyboard = InlineKeyboardMarkup(row_width=2).add(
         InlineKeyboardButton("🚛Автомобилем", callback_data="transport_auto"),
         InlineKeyboardButton("🚂Вагонами", callback_data="transport_train")
     )
-    await send_message_with_keyboard(message.from_user.id, "Выберите способ транспортировки:", keyboard)
+    await send_message_with_keyboard(user_id, "Выберите способ транспортировки:", keyboard)
 
-# Выбор способа транспортировки
 @dp.callback_query_handler(lambda c: c.data.startswith('transport'))
 async def transport_handler(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
@@ -187,21 +190,14 @@ async def confirm_handler(callback_query: CallbackQuery):
 
     await bot.send_message(CHANNEL_ID, message)
     await callback_query.answer("Данные отправлены в канал!")
-# Выбор способа транспортировки
-@dp.callback_query_handler(lambda c: c.data.startswith('transport'))
-async def transport_handler(callback_query: CallbackQuery):
+    # Переход к выбору способа транспортировки
+    await show_transport_options(user_id)
+
+@dp.callback_query_handler(lambda c: c.data == "cancel")
+async def cancel_handler(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
-    transport_type = "🚛Автомобилем" if callback_query.data == "transport_auto" else "🚂Вагонами"
-    user_data[user_id]['transport'] = transport_type
-
-    cargo_options = [
-        "Песок", "Цемент М500", "Цемент М400", "Щебень 5x10",
-        "Щебень 5x20", "Щебень 10x20", "Щебень 20x40", "Металлопрокат"
-    ]
-    keyboard = InlineKeyboardMarkup(row_width=2)
-    keyboard.add(*(InlineKeyboardButton(cargo, callback_data=f"cargo_{cargo}") for cargo in cargo_options))
-
-    await send_message_with_keyboard(user_id, "Выберите груз:", keyboard)
+    user_data.pop(user_id, None)
+    await callback_query.message.edit_text("Вы отменили ввод. Начните заново с /start.")
 
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True)
