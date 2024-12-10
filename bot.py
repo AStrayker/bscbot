@@ -28,23 +28,20 @@ class OrderState(StatesGroup):
 user_data = {}
 
 
-# Общая функция для отправки сообщения с клавиатурой
-async def send_message_with_keyboard(user_id, text, keyboard):
-    try:
-        await bot.send_message(user_id, text, reply_markup=keyboard)
-    except Exception as e:
-        logger.error(f"Ошибка отправки сообщения: {e}")
+# Функция для отправки сообщения из шага 2 (Выбор способа транспортировки)
+async def send_transport_choice(user_id):
+    keyboard = InlineKeyboardMarkup(row_width=2).add(
+        InlineKeyboardButton("🚛Автомобилем", callback_data="transport_auto"),
+        InlineKeyboardButton("🚂Вагонами", callback_data="transport_train")
+    )
+    await bot.send_message(user_id, "Выберите способ транспортировки:", reply_markup=keyboard)
 
 
 # Шаг 1: Начало сценария
 @dp.message_handler(commands=['start'])
 async def start_handler(message: types.Message):
     user_data[message.from_user.id] = {}
-    keyboard = InlineKeyboardMarkup(row_width=2).add(
-        InlineKeyboardButton("🚛Автомобилем", callback_data="transport_auto"),
-        InlineKeyboardButton("🚂Вагонами", callback_data="transport_train")
-    )
-    await send_message_with_keyboard(message.from_user.id, "Выберите способ транспортировки:", keyboard)
+    await send_transport_choice(message.from_user.id)
 
 
 # Шаг 2: Выбор способа транспортировки
@@ -61,7 +58,7 @@ async def transport_handler(callback_query: CallbackQuery):
     keyboard = InlineKeyboardMarkup(row_width=2)
     keyboard.add(*(InlineKeyboardButton(cargo, callback_data=f"cargo_{cargo}") for cargo in cargo_options))
 
-    await send_message_with_keyboard(user_id, "Выберите груз:", keyboard)
+    await bot.send_message(user_id, "Выберите груз:", reply_markup=keyboard)
 
 
 # Шаг 3: Выбор груза
@@ -76,7 +73,7 @@ async def cargo_handler(callback_query: CallbackQuery):
             InlineKeyboardButton("Проволока", callback_data="metal_provoloka"),
             InlineKeyboardButton("Металлопрокат", callback_data="metal_metal")
         )
-        await send_message_with_keyboard(user_id, "Уточните тип металлопроката:", keyboard)
+        await bot.send_message(user_id, "Уточните тип металлопроката:", reply_markup=keyboard)
     else:
         await choose_sender(user_id)
 
@@ -99,7 +96,7 @@ async def choose_sender(user_id):
     keyboard = InlineKeyboardMarkup(row_width=2)
     keyboard.add(*(InlineKeyboardButton(sender, callback_data=f"sender_{sender}") for sender in sender_options))
 
-    await send_message_with_keyboard(user_id, "Выберите отправителя:", keyboard)
+    await bot.send_message(user_id, "Выберите отправителя:", reply_markup=keyboard)
 
 
 @dp.callback_query_handler(lambda c: c.data.startswith('sender'))
@@ -114,7 +111,7 @@ async def sender_handler(callback_query: CallbackQuery):
         keyboard = InlineKeyboardMarkup(row_width=3).add(
             *(InlineKeyboardButton(str(i), callback_data=f"quantity_{i}") for i in range(1, 6))
         )
-        await send_message_with_keyboard(user_id, "Укажите количество машин (или введите текстом):", keyboard)
+        await bot.send_message(user_id, "Укажите количество машин (или введите текстом):", reply_markup=keyboard)
         await OrderState.choosing_quantity.set()
     elif transport == "🚂Вагонами":
         keyboard = InlineKeyboardMarkup(row_width=2).add(
@@ -122,7 +119,7 @@ async def sender_handler(callback_query: CallbackQuery):
             InlineKeyboardButton("🟡Не разгружено", callback_data="status_not_unloaded"),
             InlineKeyboardButton("🟠Не указано", callback_data="status_not_specified")
         )
-        await send_message_with_keyboard(user_id, "Укажите статус:", keyboard)
+        await bot.send_message(user_id, "Укажите статус:", reply_markup=keyboard)
         await OrderState.choosing_status.set()
 
 
@@ -173,7 +170,7 @@ async def confirm_order(user_id):
         InlineKeyboardButton("Подтвердить", callback_data="confirm"),
         InlineKeyboardButton("Отмена", callback_data="cancel")
     )
-    await send_message_with_keyboard(user_id, message, keyboard)
+    await bot.send_message(user_id, message, reply_markup=keyboard)
 
 
 @dp.callback_query_handler(lambda c: c.data == "confirm")
@@ -203,14 +200,16 @@ async def confirm_handler(callback_query: CallbackQuery):
         logger.error(f"Ошибка отправки в канал: {e}")
         await callback_query.message.answer("Ошибка при отправке в канал.")
 
-    await start_handler(types.Message(chat=callback_query.message.chat, from_user=callback_query.from_user))
+    # Возврат к шагу 2
+    await send_transport_choice(user_id)
 
 
 @dp.callback_query_handler(lambda c: c.data == "cancel")
 async def cancel_handler(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
     user_data.pop(user_id, None)
-    await callback_query.message.edit_text("Вы отменили ввод. Начните заново с /start.")
+    await callback_query.message.answer("Вы отменили ввод. Начните заново с выбора способа транспортировки.")
+    await send_transport_choice(user_id)
 
 
 if __name__ == "__main__":
