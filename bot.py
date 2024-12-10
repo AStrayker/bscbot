@@ -27,6 +27,7 @@ class OrderState(StatesGroup):
 # Временное хранилище данных пользователей
 user_data = {}
 
+
 # Общая функция для отправки сообщения с клавиатурой
 async def send_message_with_keyboard(user_id, text, keyboard):
     try:
@@ -34,20 +35,19 @@ async def send_message_with_keyboard(user_id, text, keyboard):
     except Exception as e:
         logger.error(f"Ошибка отправки сообщения: {e}")
 
-# Начало сценария
+
+# Шаг 1: Начало сценария
 @dp.message_handler(commands=['start'])
 async def start_handler(message: types.Message):
-    await show_transport_options(message.from_user.id)
-
-# Выбор способа транспортировки
-async def show_transport_options(user_id):
-    user_data[user_id] = {}  # Сброс пользовательских данных
+    user_data[message.from_user.id] = {}
     keyboard = InlineKeyboardMarkup(row_width=2).add(
         InlineKeyboardButton("🚛Автомобилем", callback_data="transport_auto"),
         InlineKeyboardButton("🚂Вагонами", callback_data="transport_train")
     )
-    await send_message_with_keyboard(user_id, "Выберите способ транспортировки:", keyboard)
+    await send_message_with_keyboard(message.from_user.id, "Выберите способ транспортировки:", keyboard)
 
+
+# Шаг 2: Выбор способа транспортировки
 @dp.callback_query_handler(lambda c: c.data.startswith('transport'))
 async def transport_handler(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
@@ -63,7 +63,8 @@ async def transport_handler(callback_query: CallbackQuery):
 
     await send_message_with_keyboard(user_id, "Выберите груз:", keyboard)
 
-# Выбор груза
+
+# Шаг 3: Выбор груза
 @dp.callback_query_handler(lambda c: c.data.startswith('cargo'))
 async def cargo_handler(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
@@ -79,7 +80,8 @@ async def cargo_handler(callback_query: CallbackQuery):
     else:
         await choose_sender(user_id)
 
-# Тип металлопроката
+
+# Шаг 3.1: Тип металлопроката
 @dp.callback_query_handler(lambda c: c.data.startswith('metal'))
 async def metal_handler(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
@@ -87,7 +89,8 @@ async def metal_handler(callback_query: CallbackQuery):
     user_data[user_id]['cargo'] = metal_type
     await choose_sender(user_id)
 
-# Выбор отправителя
+
+# Шаг 4: Выбор отправителя
 async def choose_sender(user_id):
     sender_options = [
         "Кривой Рог Цемент", "СпецКарьер", "Смарт Гранит",
@@ -97,6 +100,7 @@ async def choose_sender(user_id):
     keyboard.add(*(InlineKeyboardButton(sender, callback_data=f"sender_{sender}") for sender in sender_options))
 
     await send_message_with_keyboard(user_id, "Выберите отправителя:", keyboard)
+
 
 @dp.callback_query_handler(lambda c: c.data.startswith('sender'))
 async def sender_handler(callback_query: CallbackQuery):
@@ -121,7 +125,8 @@ async def sender_handler(callback_query: CallbackQuery):
         await send_message_with_keyboard(user_id, "Укажите статус:", keyboard)
         await OrderState.choosing_status.set()
 
-# Указание количества машин
+
+# Шаг 5: Указание количества машин
 @dp.callback_query_handler(lambda c: c.data.startswith('quantity'), state=OrderState.choosing_quantity)
 async def quantity_handler(callback_query: CallbackQuery, state: FSMContext):
     user_id = callback_query.from_user.id
@@ -130,7 +135,8 @@ async def quantity_handler(callback_query: CallbackQuery, state: FSMContext):
     await state.finish()
     await confirm_order(user_id)
 
-# Указание статуса для вагонов
+
+# Шаг 5: Указание статуса для вагонов
 @dp.callback_query_handler(lambda c: c.data.startswith('status'), state=OrderState.choosing_status)
 async def status_handler(callback_query: CallbackQuery, state: FSMContext):
     user_id = callback_query.from_user.id
@@ -144,7 +150,8 @@ async def status_handler(callback_query: CallbackQuery, state: FSMContext):
     await state.finish()
     await confirm_order(user_id)
 
-# Подтверждение данных
+
+# Шаг 6: Подтверждение данных
 async def confirm_order(user_id):
     data = user_data.get(user_id, {})
     if not data:
@@ -168,6 +175,7 @@ async def confirm_order(user_id):
     )
     await send_message_with_keyboard(user_id, message, keyboard)
 
+
 @dp.callback_query_handler(lambda c: c.data == "confirm")
 async def confirm_handler(callback_query: CallbackQuery):
     user_id = callback_query.from_user.id
@@ -182,22 +190,13 @@ async def confirm_handler(callback_query: CallbackQuery):
         f"Транспортировка: {data.get('transport', 'Не указано')}\n"
         f"Груз: {data.get('cargo', 'Не указано')}\n"
         f"Отправитель: {data.get('sender', 'Не указано')}\n"
-    )
-    if data.get('transport') == "🚛Автомобилем":
-        message += f"Количество машин: {data.get('quantity', 'Не указано')}\n"
-    elif data.get('transport') == "🚂Вагонами":
-        message += f"Статус: {data.get('status', 'Не указано')}\n"
-
-    await bot.send_message(CHANNEL_ID, message)
-    await callback_query.answer("Данные отправлены в канал!")
-    # Переход к выбору способа транспортировки
-    await show_transport_options(user_id)
-
-@dp.callback_query_handler(lambda c: c.data == "cancel")
-async def cancel_handler(callback_query: CallbackQuery):
-    user_id = callback_query.from_user.id
-    user_data.pop(user_id, None)
-    await callback_query.message.edit_text("Вы отменили ввод. Начните заново с /start.")
+   )
+        await message.answer("Данные успешно отправлены в канал!")
+    else:
+        await message.answer("Отправка отменена.")
+    user_data.pop(message.from_user.id, None)
+    await start_handler(message)
 
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True)
+# файл: telegram_transport_bot.py
