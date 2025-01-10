@@ -1,0 +1,80 @@
+async def handle_quantity_or_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обрабатывает количество машин или статус разгрузки и выводит подтверждение."""
+    query = update.callback_query
+    await query.answer()
+    user_id = query.from_user.id
+    if user_data[user_id]['transport'] == '🚛 Автомобилем':
+        user_data[user_id]['quantity'] = query.data.split('_')[1]
+    else:
+        status_map = {
+            'status_unloaded': '🟢 Разгружено',
+            'status_not_unloaded': '🟡 Не разгружено',
+            'status_not_specified': '🟠 Не указано'
+        }
+        user_data[user_id]['status'] = status_map[query.data]
+
+    # Формирование сообщения с данными
+    message = f"""
+Транспортировка: {user_data[user_id]['transport']}
+Груз: {user_data[user_id]['cargo']}
+Отправитель: {user_data[user_id]['sender']}
+"""
+    if 'quantity' in user_data[user_id]:
+        message += f"Количество машин: {user_data[user_id]['quantity']}"
+    else:
+        message += f"Статус: {user_data[user_id]['status']}"
+
+    keyboard = [
+        [InlineKeyboardButton("✅ Подтвердить", callback_data='confirm'), InlineKeyboardButton("❌ Отмена", callback_data='cancel')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(text=f"Подтвердите данные:\n{message}", reply_markup=reply_markup)
+
+async def handle_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обрабатывает подтверждение или отмену."""
+    query = update.callback_query
+    await query.answer()
+    user_id = query.from_user.id
+    message = f"""
+Транспортировка: {user_data[user_id]['transport']}
+Груз: {user_data[user_id]['cargo']}
+Отправитель: {user_data[user_id]['sender']}
+"""
+    if 'quantity' in user_data[user_id]:
+        message += f"Количество машин: {user_data[user_id]['quantity']}"
+    else:
+        message += f"Статус: {user_data[user_id]['status']}"
+
+    if query.data == 'confirm':
+        # Отправка данных в канал
+        try:
+            await context.bot.send_message(chat_id=CHANNEL_ID, text=f"Новый заказ:\n{message}")
+            await query.edit_message_text(text="Данные успешно отправлены.")
+        except Exception as e:
+            logging.error(f"Ошибка отправки в канал: {e}")
+            await query.edit_message_text(text="Ошибка отправки данных. Попробуйте позже.")
+    else:  # Отмена
+        await query.edit_message_text(text="Отправка отменена.")
+
+    # Очистка данных пользователя и переход к выбору транспорта
+    user_data.pop(user_id, None)
+    await start(update, context)
+
+async def main() -> None:
+    """Запускает бота."""
+    application = Application.builder().token(TOKEN).build()
+
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(handle_transport, pattern='^transport_'))
+    application.add_handler(CallbackQueryHandler(handle_cargo, pattern='^cargo_'))
+    application.add_handler(CallbackQueryHandler(handle_sender, pattern='^sender_'))
+    application.add_handler(CallbackQueryHandler(handle_sender_choice, pattern='^sender_'))
+    application.add_handler(CallbackQueryHandler(handle_quantity_or_status, pattern='^(quantity_|status_)'))
+    application.add_handler(CallbackQueryHandler(handle_confirmation, pattern='^(confirm|cancel)$'))
+
+    await application.run_polling()
+
+if __name__ == '__main__':
+    import asyncio
+    asyncio.run(main())
