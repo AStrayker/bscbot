@@ -1,0 +1,154 @@
+import telegram
+from telegram import Update
+from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters,
+                          CallbackContext)
+
+# Токен вашего бота
+TOKEN = '6072615655:AAHQh3BVU3HNHd3p7vfvE3JsBzfHiG-hNMU'
+# ID вашего канала
+CHANNEL_ID = '@precoinmarket_channel'
+
+# Словарь для хранения данных пользователей
+user_data = {}
+
+def start(update: Update, context: CallbackContext) -> None:
+    """Отправляет приветственное сообщение и запрашивает выбор транспорта."""
+    user_id = update.effective_user.id
+    user_data[user_id] = {}  # Очищаем или создаем данные пользователя
+
+    update.message.reply_text(
+        "Выберите способ транспортировки:",
+        reply_markup=telegram.ReplyKeyboardMarkup([
+            ['🚛 Автомобилем', '🚂 Вагонами']
+        ], one_time_keyboard=True, resize_keyboard=True))
+
+def handle_transport(update: Update, context: CallbackContext) -> None:
+    """Обрабатывает выбор транспорта и запрашивает выбор груза."""
+    user_id = update.effective_user.id
+    user_data[user_id]['transport'] = update.message.text
+
+    update.message.reply_text(
+        "Выберите груз:",
+        reply_markup=telegram.ReplyKeyboardMarkup([
+            ['Песок', 'Цемент М500', 'Цемент М400'],
+            ['Щебень 5x10', 'Щебень 5x20', 'Щебень 10x20'],
+            ['Щебень 20x40', 'Металлопрокат']
+        ], one_time_keyboard=True, resize_keyboard=True))
+
+def handle_cargo(update: Update, context: CallbackContext) -> None:
+    """Обрабатывает выбор груза."""
+    user_id = update.effective_user.id
+    user_data[user_id]['cargo'] = update.message.text
+
+    if user_data[user_id]['cargo'] == 'Металлопрокат':
+        update.message.reply_text(
+            "Уточните тип металлопроката:",
+            reply_markup=telegram.ReplyKeyboardMarkup([
+                ['Проволока', 'Металлопрокат']
+            ], one_time_keyboard=True, resize_keyboard=True))
+    else:
+        handle_sender(update, context)  # Переход к выбору отправителя
+
+def handle_sender(update: Update, context: CallbackContext) -> None:
+    """Запрашивает выбор отправителя."""
+    user_id = update.effective_user.id
+    if user_data[user_id]['cargo'] == 'Металлопрокат':
+        user_data[user_id]['cargo'] = update.message.text  # Сохраняем уточненный тип
+
+    update.message.reply_text(
+        "Выберите отправителя:",
+        reply_markup=telegram.ReplyKeyboardMarkup([
+            ['Кривой Рог Цемент', 'СпецКарьер', 'Смарт Гранит'],
+            ['Баловские Пески', 'Любимовский Карьер', 'ТОВ МКК №3'],
+            ['Новатор']
+        ], one_time_keyboard=True, resize_keyboard=True))
+
+def handle_sender_choice(update: Update, context: CallbackContext) -> None:
+    """Обрабатывает выбор отправителя и запрашивает количество машин или статус."""
+    user_id = update.effective_user.id
+    user_data[user_id]['sender'] = update.message.text
+
+    if user_data[user_id]['transport'] == '🚛 Автомобилем':
+        update.message.reply_text(
+            "Укажите количество машин:",
+            reply_markup=telegram.ReplyKeyboardMarkup([
+                ['1', '2', '3', '4', '5']
+            ], one_time_keyboard=True, resize_keyboard=True))
+    else:  # Транспорт - вагонами
+        update.message.reply_text(
+            "Укажите статус разгрузки:",
+            reply_markup=telegram.ReplyKeyboardMarkup([
+                ['🟢 Разгружено', '🟡 Не разгружено', '🟠 Не указано']
+            ], one_time_keyboard=True, resize_keyboard=True))
+
+def handle_quantity_or_status(update: Update, context: CallbackContext) -> None:
+    """Обрабатывает количество машин или статус разгрузки и выводит подтверждение."""
+    user_id = update.effective_user.id
+    if user_data[user_id]['transport'] == '🚛 Автомобилем':
+        user_data[user_id]['quantity'] = update.message.text
+    else:
+        user_data[user_id]['status'] = update.message.text
+
+    # Формирование сообщения с данными
+    message = f"""
+Транспортировка: {user_data[user_id]['transport']}
+Груз: {user_data[user_id]['cargo']}
+Отправитель: {user_data[user_id]['sender']}
+"""
+    if 'quantity' in user_data[user_id]:
+        message += f"Количество машин: {user_data[user_id]['quantity']}"
+    else:
+        message += f"Статус: {user_data[user_id]['status']}"
+
+    update.message.reply_text(
+        f"Подтвердите данные:\n{message}",
+        reply_markup=telegram.ReplyKeyboardMarkup([
+            ['✅ Подтвердить', '❌ Отмена']
+        ], one_time_keyboard=True, resize_keyboard=True))
+
+def handle_confirmation(update: Update, context: CallbackContext) -> None:
+    """Обрабатывает подтверждение или отмену."""
+    user_id = update.effective_user.id
+    message = f"""
+Транспортировка: {user_data[user_id]['transport']}
+Груз: {user_data[user_id]['cargo']}
+Отправитель: {user_data[user_id]['sender']}
+"""
+    if 'quantity' in user_data[user_id]:
+        message += f"Количество машин: {user_data[user_id]['quantity']}"
+    else:
+        message += f"Статус: {user_data[user_id]['status']}"
+
+    if update.message.text == '✅ Подтвердить':
+        # Отправка данных в канал
+        try:
+            context.bot.send_message(chat_id=CHANNEL_ID, text=f"Новый заказ:\n{message}")
+            update.message.reply_text("Данные успешно отправлены.")
+        except Exception as e:
+            print(f"Ошибка отправки в канал: {e}")
+            update.message.reply_text("Ошибка отправки данных. Попробуйте позже.")
+    else:  # Отмена
+        update.message.reply_text("Отправка отменена.")
+
+    # Очистка данных пользователя и переход к выбору транспорта
+    user_data.pop(user_id, None)
+    start(update, context)
+
+def main() -> None:
+    """Запускает бота."""
+    updater = Updater(TOKEN)
+    dispatcher = updater.dispatcher
+
+    dispatcher.add_handler(CommandHandler("start", start))
+    dispatcher.add_handler(MessageHandler(Filters.regex('^(🚛 Автомобилем|🚂 Вагонами)$'), handle_transport))
+    dispatcher.add_handler(MessageHandler(Filters.regex('^(Песок|Цемент М500|Цемент М400|Щебень 5x10|Щебень 5x20|Щебень 10x20|Щебень 20x40|Металлопрокат)$'), handle_cargo))
+    dispatcher.add_handler(MessageHandler(Filters.regex('^(Проволока|Металлопрокат)$'), handle_sender))  # Исправлено на handle_sender
+    dispatcher.add_handler(MessageHandler(Filters.regex('^(Кривой Рог Цемент|СпецКарьер|Смарт Гранит|Баловские Пески|Любимовский Карьер|ТОВ МКК №3|Новатор)$'), handle_sender_choice))
+    dispatcher.add_handler(MessageHandler(Filters.regex('^(1|2|3|4|5|🟢 Разгружено|🟡 Не разгружено|🟠 Не указано)$'), handle_quantity_or_status))
+    dispatcher.add_handler(MessageHandler(Filters.regex('^(✅ Подтвердить|❌ Отмена)$'), handle_confirmation))
+
+    updater.start_polling()
+    updater.idle()
+
+if __name__ == '__main__':
+    main()
